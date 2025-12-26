@@ -13,6 +13,10 @@
     {
       "note": "TEST: journaling pipeline works",
       "ts": "2025-12-26 13:10:37 ET"
+    },
+    {
+      "note": "TEST: global updater works (fixed)",
+      "ts": "2025-12-26 13:15:16 ET"
     }
   ],
   "levels": {
