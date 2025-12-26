@@ -1,0 +1,40 @@
+﻿name: BTC Futures Morning Playbook
+
+on:
+  schedule:
+    # Run often; the script writes ONLY in a tight 6:00–6:10am ET window.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: btc-journal-daily
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Generate playbook
+        run: python generate_playbook.py
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "btc-journal-bot"
+          git config user.email "btc-journal-bot@users.noreply.github.com"
+          git add journal || true
+          git diff --cached --quiet || git commit -m "Morning Playbook: 2025-12-26T13:03:25Z"
+          git push
