@@ -35,10 +35,13 @@ jobs:
           # Manual runs should always write; scheduled runs only write in 06:00–06:10 ET window
           FORCE_WRITE: ${{ github.event_name == 'workflow_dispatch' }}
 
+      - name: Build journal index + latest
+        run: python scripts/build_index.py
+
       - name: Commit & push if changed
         run: |
           git config user.name "btc-journal-bot"
           git config user.email "btc-journal-bot@users.noreply.github.com"
-          git add journal || true
-          git diff --cached --quiet || git commit -m "Morning Playbook: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git add journal README.md .gitignore || true
+          git diff --cached --quiet || git commit -m "Update journal index: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push

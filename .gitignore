@@ -1,2 +1,6 @@
-﻿# Local-only
+﻿# Local logs / scheduled-task artifacts
 logs/
+*.log
+
+# Optional: if you keep local-only autosync here
+scripts/autosync.ps1
