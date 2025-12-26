@@ -7,3 +7,5 @@
 
 Source JSON: [2025-12-26.json](2025/2025-12-26.json)
 
+History dashboard: [INDEX.md](INDEX.md)
+
