@@ -1,0 +1,53 @@
+{
+  "btc_spot_usd": 87182.27,
+  "derivatives_okx": {
+    "fundingRate": 8.0950539169e-06,
+    "fundingTime": 1766793600000,
+    "instId": "BTC-USDT-SWAP",
+    "method": "current_period",
+    "nextFundingTime": 1766822400000,
+    "premium": -0.0005637753698915,
+    "ts": 1766772558289
+  },
+  "levels": {
+    "resistance": [
+      88490.01
+    ],
+    "support": [
+      85874.54
+    ]
+  },
+  "paper_test_trade": {
+    "long": {
+      "entry": 87443.82,
+      "stop": 85702.79,
+      "tps": [
+        88054.1,
+        88490.01
+      ],
+      "trigger": "15m close >= 87356.64"
+    },
+    "short": {
+      "entry": 86920.73,
+      "stop": 88666.99,
+      "tps": [
+        86310.45,
+        85874.54
+      ],
+      "trigger": "15m close <= 87007.91"
+    },
+    "test_trade_id": "BTC-2025-12-26-0600-ET-TEST",
+    "type": "OCO_conditional"
+  },
+  "prior_day_review": {
+    "note": "Upgrade path: pull candles and auto-score whether triggers fired + MAE/MFE for yesterday.",
+    "status": "not_implemented"
+  },
+  "risk_rules": {
+    "daily_stop_R": 2.0,
+    "funding_half_size_threshold": 0.0003,
+    "funding_no_trade_threshold": 0.001,
+    "max_risk_per_idea_R": 1.0
+  },
+  "run_timestamp_et": "2025-12-26 13:09"
+}
