@@ -29,6 +29,8 @@ jobs:
       - name: Install deps
         run: pip install -r requirements.txt
 
+      - name: Score yesterday test trade (auto)
+        run: python scripts/score_yesterday.py
       - name: Generate playbook
         run: python generate_playbook.py
         env:
@@ -45,3 +47,4 @@ jobs:
           git add journal README.md .gitignore || true
           git diff --cached --quiet || git commit -m "Update journal index: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push
+
