@@ -36,7 +36,8 @@ jobs:
 
       - name: Auto-score yesterday (paper test trade)
         run: python scripts/score_yesterday.py
-
+      - name: Auto-score yesterday test trade
+        run: python scripts/auto_score_yesterday.py
       - name: Build dashboard
         run: python scripts/build_dashboard.py
 
@@ -51,3 +52,4 @@ jobs:
           git diff --cached --quiet || git commit -m "Daily update: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git pull --rebase
           git push
+
