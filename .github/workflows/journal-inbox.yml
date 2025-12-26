@@ -1,0 +1,65 @@
+﻿name: Journal Inbox
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      text:
+        description: "Update text to append to today's journal"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: btc-journal-inbox
+  cancel-in-progress: false
+
+jobs:
+  update:
+    # Skip PR comments; only Issues
+    if: ${{ github.event_name != 'issue_comment' || github.event.issue.pull_request == null }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Append update (issue comment)
+        if: ${{ github.event_name == 'issue_comment' }}
+        run: python scripts/github_append_update.py
+        env:
+          UPDATE_SOURCE: issue_comment
+          UPDATE_TEXT: ${{ github.event.comment.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+      - name: Append update (manual)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: python scripts/github_append_update.py
+        env:
+          UPDATE_SOURCE: workflow_dispatch
+          UPDATE_TEXT: ${{ inputs.text }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+      - name: Build journal index + latest
+        run: python scripts/build_index.py
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "btc-journal-bot"
+          git config user.email "btc-journal-bot@users.noreply.github.com"
+          git add journal
+          git diff --cached --quiet || git commit -m "Journal inbox update: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git pull --rebase
+          git push
