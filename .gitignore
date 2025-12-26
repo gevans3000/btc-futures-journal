@@ -4,3 +4,8 @@ logs/
 
 # Optional: if you keep local-only autosync here
 scripts/autosync.ps1
+
+# Local artifacts
+DefiLlama_*.csv
+DefiLlama_*.json
+
