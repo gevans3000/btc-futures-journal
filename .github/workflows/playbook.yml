@@ -2,8 +2,9 @@
 
 on:
   schedule:
-    # Run often; the script writes ONLY in a tight 6:00–6:10am ET window.
-    - cron: "*/15 * * * *"
+    # 6:00 AM ET year-round (DST-safe): one of these two will be 6:00 ET
+    - cron: "0 10 * * *"  # 06:00 ET during DST (UTC-4)
+    - cron: "0 11 * * *"  # 06:00 ET during Standard (UTC-5)
   workflow_dispatch:
 
 permissions:
@@ -38,3 +39,4 @@ jobs:
           git add journal || true
           git diff --cached --quiet || git commit -m "Morning Playbook: 2025-12-26T13:03:25Z"
           git push
+

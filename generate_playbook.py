@@ -96,8 +96,10 @@ def write_daily_json(now_et: datetime, playbook: dict) -> str:
     return out_path
 
 def main() -> None:
-    now_et = datetime.now(tz=ET)
-    if not in_run_window(now_et):
+        now_et = datetime.now(tz=ET)
+
+    force = os.getenv("FORCE_WRITE", "").strip().lower() in {"1", "true", "yes", "y"}
+    if (not force) and (not in_run_window(now_et)):
         print(f"Not in run window (ET): {now_et.isoformat()}")
         return
 
@@ -109,3 +111,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
