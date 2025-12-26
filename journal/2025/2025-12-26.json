@@ -9,6 +9,12 @@
     "premium": -0.0005637753698915,
     "ts": 1766772558289
   },
+  "execution_log": [
+    {
+      "note": "TEST: journaling pipeline works",
+      "ts": "2025-12-26 13:10:37 ET"
+    }
+  ],
   "levels": {
     "resistance": [
       88490.01
