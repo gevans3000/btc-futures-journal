@@ -41,8 +41,7 @@ def fetch_okx_funding_snapshot() -> dict:
 
 def build_playbook(now_et: datetime, btc_spot: float, okx: dict) -> dict:
     p = btc_spot
-    band = p * 0.015  # 1.5% default band (safe placeholder)
-
+    band = p * 0.015  # 1.5% placeholder band (upgrade later to candle-derived levels)
     support = round(p - band, 2)
     resistance = round(p + band, 2)
 
@@ -52,10 +51,7 @@ def build_playbook(now_et: datetime, btc_spot: float, okx: dict) -> dict:
         "run_timestamp_et": now_et.strftime("%Y-%m-%d %H:%M"),
         "btc_spot_usd": round(p, 2),
         "derivatives_okx": okx,
-        "levels": {
-            "support": [support],
-            "resistance": [resistance],
-        },
+        "levels": {"support": [support], "resistance": [resistance]},
         "risk_rules": {
             "max_risk_per_idea_R": 1.0,
             "daily_stop_R": 2.0,
@@ -66,13 +62,13 @@ def build_playbook(now_et: datetime, btc_spot: float, okx: dict) -> dict:
             "test_trade_id": test_trade_id,
             "type": "OCO_conditional",
             "long": {
-                "trigger": f"15m close >= {round(p * 1.002,2)}",
+                "trigger": f"15m close >= {round(p * 1.002, 2)}",
                 "entry": round(p * 1.003, 2),
                 "stop": round(support * 0.998, 2),
                 "tps": [round(p * 1.01, 2), round(resistance, 2)],
             },
             "short": {
-                "trigger": f"15m close <= {round(p * 0.998,2)}",
+                "trigger": f"15m close <= {round(p * 0.998, 2)}",
                 "entry": round(p * 0.997, 2),
                 "stop": round(resistance * 1.002, 2),
                 "tps": [round(p * 0.99, 2), round(p * 0.985, 2)],
@@ -96,9 +92,9 @@ def write_daily_json(now_et: datetime, playbook: dict) -> str:
     return out_path
 
 def main() -> None:
-        now_et = datetime.now(tz=ET)
-
+    now_et = datetime.now(tz=ET)
     force = os.getenv("FORCE_WRITE", "").strip().lower() in {"1", "true", "yes", "y"}
+
     if (not force) and (not in_run_window(now_et)):
         print(f"Not in run window (ET): {now_et.isoformat()}")
         return
@@ -111,4 +107,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

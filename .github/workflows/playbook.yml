@@ -2,7 +2,7 @@
 
 on:
   schedule:
-    # 6:00 AM ET year-round (DST-safe): one of these two will be 6:00 ET
+    # 6:00 AM ET year-round (DST-safe): one of these two will be 06:00 ET
     - cron: "0 10 * * *"  # 06:00 ET during DST (UTC-4)
     - cron: "0 11 * * *"  # 06:00 ET during Standard (UTC-5)
   workflow_dispatch:
@@ -31,12 +31,14 @@ jobs:
 
       - name: Generate playbook
         run: python generate_playbook.py
+        env:
+          # Manual runs should always write; scheduled runs only write in 06:00–06:10 ET window
+          FORCE_WRITE: ${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Commit & push if changed
         run: |
           git config user.name "btc-journal-bot"
           git config user.email "btc-journal-bot@users.noreply.github.com"
           git add journal || true
-          git diff --cached --quiet || git commit -m "Morning Playbook: 2025-12-26T13:03:25Z"
+          git diff --cached --quiet || git commit -m "Morning Playbook: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push
-
