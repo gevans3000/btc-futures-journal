@@ -10,134 +10,12 @@ from zoneinfo import ZoneInfo
 import requests
 
 ET = ZoneInfo("America/New_York")
-UTC = timezone.utc
 
-COINBASE_CANDLES = "https://api.exchange.coinbase.com/products/BTC-USD/candles"
+KRAKEN_OHLC = "https://api.kraken.com/0/public/OHLC"
+PAIR = "XBTUSD"  # Kraken spot pair (proxy for BTC)
 
-def http_get_json(url: str, params: dict, timeout: int = 25):
-    r = requests.get(url, params=params, timeout=timeout, headers={"User-Agent": "btc-journal-bot/1.0"})
-    r.raise_for_status()
-    return r.json()
-
-def iso_z(dt: datetime) -> str:
-    dt = dt.astimezone(UTC)
-    return dt.replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-def parse_last_float(s: str) -> float | None:
-    if not isinstance(s, str):
-        return None
-    nums = re.findall(r"[-+]?\d+(?:\.\d+)?", s.replace(",", ""))
-    if not nums:
-        return None
-    try:
-        return float(nums[-1])
-    except Exception:
-        return None
-
-@dataclass
-class Candle:
-    t: int       # start time, epoch seconds (UTC)
-    low: float
-    high: float
-    open: float
-    close: float
-    volume: float
-
-def fetch_5m_candles(start_utc: datetime, end_utc: datetime) -> list[Candle]:
-    # Coinbase Exchange candles endpoint returns up to 300 rows; 24h @ 5m = 288 (fits).
-    params = {"granularity": 300, "start": iso_z(start_utc), "end": iso_z(end_utc)}
-    raw = http_get_json(COINBASE_CANDLES, params=params)
-    out: list[Candle] = []
-    for row in raw or []:
-        try:
-            t, low, high, op, close, vol = row
-            out.append(Candle(int(t), float(low), float(high), float(op), float(close), float(vol)))
-        except Exception:
-            continue
-    out.sort(key=lambda c: c.t)
-    # filter strict window
-    s = int(start_utc.timestamp())
-    e = int(end_utc.timestamp())
-    return [c for c in out if s <= c.t < e]
-
-def build_15m_closes(candles: list[Candle], start_ts: int) -> list[tuple[int, float]]:
-    # returns list of (close_time_ts, close_price) for 15m bars aligned to ET-midnight boundary (converted to UTC)
-    if not candles:
-        return []
-    # align first index to start_ts on 5m grid
-    i0 = None
-    for i, c in enumerate(candles):
-        if c.t >= start_ts and ((c.t - start_ts) % 300 == 0):
-            i0 = i
-            break
-    if i0 is None:
-        return []
-    closes = []
-    i = i0 + 2
-    while i < len(candles):
-        c3 = candles[i]
-        # 15m close occurs at end of 3rd 5m candle
-        close_time = c3.t + 300
-        closes.append((close_time, c3.close))
-        i += 3
-    return closes
-
-def find_trigger_time(closes15: list[tuple[int, float]], direction: str, trigger: float) -> int | None:
-    if direction == "long":
-        for t, px in closes15:
-            if px >= trigger:
-                return t
-    else:
-        for t, px in closes15:
-            if px <= trigger:
-                return t
-    return None
-
-def find_fill_time(candles: list[Candle], after_ts: int, direction: str, entry: float) -> int | None:
-    for c in candles:
-        if c.t < after_ts:
-            continue
-        if direction == "long" and c.high >= entry:
-            return c.t
-        if direction == "short" and c.low <= entry:
-            return c.t
-    return None
-
-def simulate_exit(candles: list[Candle], fill_ts: int, direction: str, entry: float, stop: float, tp1: float) -> tuple[str, int, float]:
-    # Conservative: if both stop and tp hit in same candle, count stop first.
-    last_close_ts = None
-    last_close_px = None
-    for c in candles:
-        if c.t < fill_ts:
-            continue
-        last_close_ts = c.t + 300
-        last_close_px = c.close
-
-        if direction == "long":
-            if c.low <= stop:
-                return ("SL", c.t, stop)
-            if c.high >= tp1:
-                return ("TP1", c.t, tp1)
-        else:
-            if c.high >= stop:
-                return ("SL", c.t, stop)
-            if c.low <= tp1:
-                return ("TP1", c.t, tp1)
-
-    # If nothing hit, close EOD at last close
-    if last_close_ts is not None and last_close_px is not None:
-        return ("EOD_CLOSE", last_close_ts, float(last_close_px))
-    return ("NO_DATA", fill_ts, entry)
-
-def r_multiple(direction: str, entry: float, stop: float, exit_px: float) -> float | None:
-    risk = (entry - stop) if direction == "long" else (stop - entry)
-    if risk <= 0:
-        return None
-    pnl = (exit_px - entry) if direction == "long" else (entry - exit_px)
-    return pnl / risk
-
-def path_for_date(d: datetime) -> str:
-    return os.path.join("journal", d.strftime("%Y"), f"{d.strftime('%Y-%m-%d')}.json")
+def iso_et(dt: datetime) -> str:
+    return dt.astimezone(ET).strftime("%Y-%m-%d %H:%M:%S ET")
 
 def load_json(path: str) -> dict | None:
     try:
@@ -153,130 +31,246 @@ def save_json(path: str, obj: dict) -> None:
         json.dump(obj, f, indent=2, sort_keys=True)
         f.write("\n")
 
-def fmt_et(ts: int) -> str:
-    return datetime.fromtimestamp(ts, tz=UTC).astimezone(ET).strftime("%Y-%m-%d %H:%M:%S")
+def journal_path_for(date_et) -> str:
+    y = date_et.strftime("%Y")
+    d = date_et.strftime("%Y-%m-%d")
+    return os.path.join("journal", y, f"{d}.json")
+
+def fetch_ohlc(interval_min: int, since_unix: int) -> list[dict]:
+    # Kraken returns: result: { <pairKey>: [[time, open, high, low, close, vwap, volume, count], ...], "last": <unix> }
+    params = {"pair": PAIR, "interval": interval_min, "since": since_unix}
+    r = requests.get(KRAKEN_OHLC, params=params, timeout=25, headers={"User-Agent": "btc-journal-bot/1.0"})
+    r.raise_for_status()
+    j = r.json()
+    if j.get("error"):
+        raise RuntimeError(f"Kraken error: {j['error']}")
+    res = j.get("result", {}) or {}
+    keys = [k for k in res.keys() if k != "last"]
+    if not keys:
+        return []
+    rows = res[keys[0]]
+    out = []
+    for row in rows:
+        # time, open, high, low, close, vwap, volume, count
+        out.append({
+            "t": int(row[0]),
+            "o": float(row[1]),
+            "h": float(row[2]),
+            "l": float(row[3]),
+            "c": float(row[4]),
+        })
+    return out
+
+_num = re.compile(r"([-+]?\d+(\.\d+)?)")
+
+def parse_trigger_threshold(s: str) -> float:
+    # examples: "15m close >= 12345.67" or "15m close <= 12345.67"
+    m = _num.findall(s or "")
+    if not m:
+        raise ValueError(f"Cannot parse trigger threshold from: {s}")
+    return float(m[-1][0])
+
+@dataclass
+class SidePlan:
+    trigger: str
+    entry: float
+    stop: float
+    tps: list[float]
+
+@dataclass
+class Score:
+    status: str
+    chosen_side: str
+    trigger_time_et: str | None
+    entry: float | None
+    stop: float | None
+    exit_price: float | None
+    exit_time_et: str | None
+    outcome: str
+    R: float
+
+def first_trigger_time_15m(candles_15m: list[dict], start_unix: int, end_unix: int, op: str, thresh: float) -> int | None:
+    # treat trigger at candle close time = candle start + interval
+    interval = 15 * 60
+    for c in candles_15m:
+        t0 = c["t"]
+        t_close = t0 + interval
+        if t_close < start_unix or t_close > end_unix:
+            continue
+        close = c["c"]
+        if op == ">=" and close >= thresh:
+            return t_close
+        if op == "<=" and close <= thresh:
+            return t_close
+    return None
+
+def score_path(side: str, plan: SidePlan, candles_5m: list[dict], start_unix: int, end_unix: int) -> tuple[str, float, int | None, float | None]:
+    # returns (outcome, R, exit_time_unix, exit_price)
+    entry = plan.entry
+    stop = plan.stop
+    tps = plan.tps[:] if plan.tps else []
+
+    risk = abs(entry - stop)
+    if risk <= 0:
+        return ("invalid_risk", 0.0, None, None)
+
+    # Scan forward and pick the earliest decisive event.
+    for c in candles_5m:
+        t0 = c["t"]
+        if t0 < start_unix or t0 > end_unix:
+            continue
+        hi = c["h"]
+        lo = c["l"]
+
+        if side == "long":
+            stop_hit = lo <= stop
+            tp_hits = [tp for tp in tps if hi >= tp]
+            if stop_hit and tp_hits:
+                # ambiguous intrabar -> conservative
+                return ("ambiguous_stop_vs_tp", -1.0, t0, stop)
+            if stop_hit:
+                return ("stopped", -1.0, t0, stop)
+            if tp_hits:
+                best = max(tp_hits)
+                R = (best - entry) / (entry - stop)
+                label = "tp" + str(tps.index(best) + 1) if best in tps else "tp"
+                return (label, float(R), t0, best)
+
+        else:  # short
+            stop_hit = hi >= stop
+            tp_hits = [tp for tp in tps if lo <= tp]
+            if stop_hit and tp_hits:
+                return ("ambiguous_stop_vs_tp", -1.0, t0, stop)
+            if stop_hit:
+                return ("stopped", -1.0, t0, stop)
+            if tp_hits:
+                best = min(tp_hits)  # lowest reached
+                R = (entry - best) / (stop - entry)
+                label = "tp" + str(tps.index(best) + 1) if best in tps else "tp"
+                return (label, float(R), t0, best)
+
+    # nothing hit by end
+    return ("open_end", 0.0, None, None)
 
 def main() -> int:
     now_et = datetime.now(tz=ET)
 
-    # score the PRIOR calendar day in ET
-    y_et = (now_et - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    y_end_et = y_et + timedelta(days=1)
+    # Score "yesterday 06:00 ET -> today 06:00 ET"
+    today_0600 = now_et.replace(hour=6, minute=0, second=0, microsecond=0)
+    if now_et < today_0600:
+        today_0600 = today_0600 - timedelta(days=1)  # if run before 06:00 ET, treat as previous day boundary
+    start = today_0600 - timedelta(days=1)
+    end = today_0600
 
-    y_path = path_for_date(y_et)
+    y_path = journal_path_for(start)
     data = load_json(y_path)
     if not data:
-        print(f"No yesterday file to score: {y_path}")
+        print(f"Skip (no file): {y_path}")
         return 0
 
-    pr = data.get("prior_day_review")
-    if isinstance(pr, dict) and pr.get("status") == "scored":
+    if isinstance(data.get("paper_test_trade_autoscore"), dict) and data["paper_test_trade_autoscore"].get("status") == "scored":
         print(f"Already scored: {y_path}")
         return 0
 
     ptt = data.get("paper_test_trade") or {}
-    if not isinstance(ptt, dict):
-        print(f"No paper_test_trade found in: {y_path}")
-        return 0
+    long_raw = (ptt.get("long") or {})
+    short_raw = (ptt.get("short") or {})
 
-    long = ptt.get("long") or {}
-    short = ptt.get("short") or {}
-
-    lt = parse_last_float(long.get("trigger", ""))
-    st = parse_last_float(short.get("trigger", ""))
-    le = float(long.get("entry"))
-    ls = float(long.get("stop"))
-    ltp1 = float((long.get("tps") or [None])[0])
-    se = float(short.get("entry"))
-    ss = float(short.get("stop"))
-    stp1 = float((short.get("tps") or [None])[0])
-
-    if lt is None or st is None:
-        print(f"Could not parse trigger prices in: {y_path}")
-        return 0
-
-    start_utc = y_et.astimezone(UTC)
-    end_utc = y_end_et.astimezone(UTC)
-    candles = fetch_5m_candles(start_utc, end_utc)
-    if len(candles) < 50:
-        print("Not enough candles; skipping.")
-        return 0
-
-    closes15 = build_15m_closes(candles, start_ts=int(start_utc.timestamp()))
-    t_long = find_trigger_time(closes15, "long", lt)
-    t_short = find_trigger_time(closes15, "short", st)
-
-    if t_long is None and t_short is None:
-        result = {
-            "status": "scored",
-            "reviewed_at_et": now_et.strftime("%Y-%m-%d %H:%M:%S"),
-            "market": "BTC-USD",
-            "granularity_sec": 300,
-            "day_scored_et": y_et.strftime("%Y-%m-%d"),
-            "outcome": "NO_TRIGGER",
+    try:
+        long_plan = SidePlan(
+            trigger=str(long_raw.get("trigger") or ""),
+            entry=float(long_raw.get("entry")),
+            stop=float(long_raw.get("stop")),
+            tps=[float(x) for x in (long_raw.get("tps") or [])],
+        )
+        short_plan = SidePlan(
+            trigger=str(short_raw.get("trigger") or ""),
+            entry=float(short_raw.get("entry")),
+            stop=float(short_raw.get("stop")),
+            tps=[float(x) for x in (short_raw.get("tps") or [])],
+        )
+    except Exception as e:
+        data["paper_test_trade_autoscore"] = {
+            "status": "error",
+            "error": f"Missing/invalid paper_test_trade fields: {e}",
         }
-        data["prior_day_review"] = result
         save_json(y_path, data)
-        print(f"Scored: {y_path} => NO_TRIGGER")
+        print(f"Wrote error autoscore to: {y_path}")
         return 0
 
-    # Choose earliest trigger
-    choice = None
-    if t_long is not None and (t_short is None or t_long < t_short):
-        choice = ("long", t_long, le, ls, ltp1)
-    elif t_short is not None and (t_long is None or t_short < t_long):
-        choice = ("short", t_short, se, ss, stp1)
+    start_unix = int(start.astimezone(timezone.utc).timestamp())
+    end_unix = int(end.astimezone(timezone.utc).timestamp())
+
+    # Fetch candles once
+    c15 = fetch_ohlc(15, start_unix - 3600)
+    c5  = fetch_ohlc(5,  start_unix - 3600)
+
+    # Parse triggers
+    lt = parse_trigger_threshold(long_plan.trigger)
+    st = parse_trigger_threshold(short_plan.trigger)
+
+    long_t = first_trigger_time_15m(c15, start_unix, end_unix, ">=", lt)
+    short_t = first_trigger_time_15m(c15, start_unix, end_unix, "<=", st)
+
+    chosen = "none"
+    trig_unix = None
+    plan = None
+
+    if long_t and short_t:
+        if long_t == short_t:
+            chosen = "none"
+        elif long_t < short_t:
+            chosen, trig_unix, plan = "long", long_t, long_plan
+        else:
+            chosen, trig_unix, plan = "short", short_t, short_plan
+    elif long_t:
+        chosen, trig_unix, plan = "long", long_t, long_plan
+    elif short_t:
+        chosen, trig_unix, plan = "short", short_t, short_plan
+
+    if chosen == "none":
+        score = Score(
+            status="scored",
+            chosen_side="none",
+            trigger_time_et=None,
+            entry=None,
+            stop=None,
+            exit_price=None,
+            exit_time_et=None,
+            outcome="no_trigger_or_ambiguous",
+            R=0.0,
+        )
     else:
-        # tie or both: pick long by default but record both
-        choice = ("long", t_long or t_short, le, ls, ltp1)
+        outcome, R, exit_t, exit_px = score_path(chosen, plan, c5, trig_unix, end_unix)
+        score = Score(
+            status="scored",
+            chosen_side=chosen,
+            trigger_time_et=iso_et(datetime.fromtimestamp(trig_unix, tz=timezone.utc)),
+            entry=plan.entry,
+            stop=plan.stop,
+            exit_price=exit_px,
+            exit_time_et=iso_et(datetime.fromtimestamp(exit_t, tz=timezone.utc)) if exit_t else None,
+            outcome=outcome,
+            R=float(R),
+        )
 
-    direction, trigger_ts, entry, stop, tp1 = choice
-
-    fill_ts = find_fill_time(candles, after_ts=trigger_ts, direction=direction, entry=entry)
-    if fill_ts is None:
-        result = {
-            "status": "scored",
-            "reviewed_at_et": now_et.strftime("%Y-%m-%d %H:%M:%S"),
-            "market": "BTC-USD",
-            "granularity_sec": 300,
-            "day_scored_et": y_et.strftime("%Y-%m-%d"),
-            "direction": direction,
-            "outcome": "TRIGGER_NO_FILL",
-            "trigger_time_et": fmt_et(trigger_ts),
-            "entry": entry,
-            "stop": stop,
-            "tp1": tp1,
-        }
-        data["prior_day_review"] = result
-        save_json(y_path, data)
-        print(f"Scored: {y_path} => TRIGGER_NO_FILL ({direction})")
-        return 0
-
-    outcome, exit_ts, exit_px = simulate_exit(candles, fill_ts, direction, entry, stop, tp1)
-    r = r_multiple(direction, entry, stop, exit_px)
-
-    result = {
-        "status": "scored",
-        "reviewed_at_et": now_et.strftime("%Y-%m-%d %H:%M:%S"),
-        "market": "BTC-USD",
-        "granularity_sec": 300,
-        "day_scored_et": y_et.strftime("%Y-%m-%d"),
-        "direction": direction,
-        "outcome": outcome,
-        "trigger_time_et": fmt_et(trigger_ts),
-        "fill_time_et": fmt_et(fill_ts),
-        "exit_time_et": fmt_et(exit_ts),
-        "entry": entry,
-        "stop": stop,
-        "tp1": tp1,
-        "exit": exit_px,
-        "r_multiple": None if r is None else round(float(r), 4),
-        "assumption": "Conservative: if SL and TP hit in same 5m candle, counts SL first.",
+    data["paper_test_trade_autoscore"] = {
+        "status": score.status,
+        "window_et": {"start": iso_et(start), "end": iso_et(end)},
+        "data_source": {"provider": "kraken", "endpoint": "/public/OHLC", "pair": PAIR, "intervals_min": [5, 15]},
+        "chosen_side": score.chosen_side,
+        "trigger_time_et": score.trigger_time_et,
+        "entry": score.entry,
+        "stop": score.stop,
+        "exit_price": score.exit_price,
+        "exit_time_et": score.exit_time_et,
+        "outcome": score.outcome,
+        "R": score.R,
+        "autoscore_version": "v1",
     }
 
-    data["prior_day_review"] = result
     save_json(y_path, data)
-    print(f"Scored: {y_path} => {direction.upper()} {outcome} (R={result['r_multiple']})")
+    print(f"Scored + updated: {y_path}")
     return 0
 
 if __name__ == "__main__":

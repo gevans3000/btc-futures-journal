@@ -19,7 +19,6 @@ concurrency:
 
 jobs:
   update:
-    # Skip PR comments; only Issues
     if: ${{ github.event_name != 'issue_comment' || github.event.issue.pull_request == null }}
     runs-on: ubuntu-latest
     steps:
@@ -52,6 +51,9 @@ jobs:
           UPDATE_TEXT: ${{ inputs.text }}
           GITHUB_ACTOR: ${{ github.actor }}
 
+      - name: Build dashboard
+        run: python scripts/build_dashboard.py
+
       - name: Build journal index + latest
         run: python scripts/build_index.py
 
@@ -60,6 +62,6 @@ jobs:
           git config user.name "btc-journal-bot"
           git config user.email "btc-journal-bot@users.noreply.github.com"
           git add journal
-          git diff --cached --quiet || git commit -m "Journal inbox update: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git diff --cached --quiet || git commit -m "Inbox update: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git pull --rebase
           git push
