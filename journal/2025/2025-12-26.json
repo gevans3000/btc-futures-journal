@@ -78,6 +78,31 @@
     "test_trade_id": "BTC-2025-12-26-0600-ET-TEST",
     "type": "OCO_conditional"
   },
+  "paper_test_trade_autoscore": {
+    "R": 0.6009017028975177,
+    "autoscore_version": "v1",
+    "chosen_side": "long",
+    "data_source": {
+      "endpoint": "/public/OHLC",
+      "intervals_min": [
+        5,
+        15
+      ],
+      "pair": "XBTUSD",
+      "provider": "kraken"
+    },
+    "entry": 87449.9,
+    "exit_price": 88496.16,
+    "exit_time_et": "2025-12-26 06:00:00 ET",
+    "outcome": "tp2",
+    "status": "scored",
+    "stop": 85708.75,
+    "trigger_time_et": "2025-12-26 06:00:00 ET",
+    "window_et": {
+      "end": "2025-12-27 06:00:00 ET",
+      "start": "2025-12-26 06:00:00 ET"
+    }
+  },
   "prior_day_review": {
     "note": "Upgrade path: pull candles and auto-score whether triggers fired + MAE/MFE for yesterday.",
     "status": "not_implemented"
