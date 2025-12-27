@@ -112,8 +112,21 @@ def write_daily_json(now_et: datetime, playbook: dict, overwrite: bool) -> tuple
     print(f"Wrote: {out_path}")
     return out_path, True
 
+def resolve_now_et() -> datetime:
+    target = (os.getenv("TARGET_DATE_ET") or "").strip()
+    if not target:
+        return datetime.now(tz=ET)
+
+    try:
+        d = datetime.strptime(target, "%Y-%m-%d").date()
+    except ValueError:
+        raise SystemExit(f"TARGET_DATE_ET must be YYYY-MM-DD, got: {target!r}")
+
+    # Use 06:00 ET for deterministic file naming & consistency
+    return datetime(d.year, d.month, d.day, 6, 0, tzinfo=ET)
+
 def main() -> None:
-    now_et = datetime.now(tz=ET)
+    now_et = resolve_now_et()
     force = (os.getenv("FORCE_WRITE", "") or "").strip().lower() in {"1", "true", "yes", "y"}
     overwrite = (os.getenv("FORCE_OVERWRITE", "") or "").strip().lower() in {"1", "true", "yes", "y"}
 

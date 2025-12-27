@@ -6,6 +6,11 @@ on:
     - cron: "0 10 * * *"  # 06:00 ET during DST (UTC-4)
     - cron: "0 11 * * *"  # 06:00 ET during Standard (UTC-5)
   workflow_dispatch:
+    inputs:
+      date_et:
+        description: "Optional backfill date (ET) YYYY-MM-DD. Leave blank for today."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -33,11 +38,14 @@ jobs:
         run: python generate_playbook.py
         env:
           FORCE_WRITE: ${{ github.event_name == 'workflow_dispatch' }}
+          TARGET_DATE_ET: ${{ inputs.date_et }}
 
       - name: Auto-score yesterday (paper test trade)
         run: python scripts/score_yesterday.py
+
       - name: Auto-score yesterday test trade
         run: python scripts/auto_score_yesterday.py
+
       - name: Build dashboard
         run: python scripts/build_dashboard.py
 
@@ -52,4 +60,3 @@ jobs:
           git diff --cached --quiet || git commit -m "Daily update: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git pull --rebase
           git push
-
