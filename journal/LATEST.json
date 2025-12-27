@@ -1,5 +1,44 @@
 {
+  "auto_score": {
+    "R": 0.4757,
+    "bar": "15m",
+    "entry": 87449.9,
+    "exits": [
+      {
+        "R": 0.1753,
+        "frac": 0.5,
+        "label": "tp1",
+        "price": 88060.22,
+        "ts_ms": 1766746800000
+      },
+      {
+        "R": 0.3005,
+        "frac": 0.5,
+        "label": "tp2",
+        "price": 88496.16,
+        "ts_ms": 1766746800000
+      }
+    ],
+    "instId": "BTC-USDT-SWAP",
+    "result_label": "long: TP2 (+0.476R)",
+    "side": "long",
+    "status": "scored",
+    "stop": 85708.75,
+    "tps": [
+      88060.22,
+      88496.16
+    ],
+    "trigger_levels": {
+      "long_close_ge": 87362.71,
+      "short_close_le": 87013.96
+    },
+    "triggered": true,
+    "window_end_et": "2025-12-26 23:59",
+    "window_start_et": "2025-12-26 06:00"
+  },
   "btc_spot_usd": 87188.34,
+  "daily_R": 0.4757,
+  "daily_result": "long: TP2 (+0.476R)",
   "derivatives_okx": {
     "fundingRate": 7.274430772e-07,
     "fundingTime": 1766793600000,
