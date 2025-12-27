@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       date_et:
-        description: "Optional backfill date (ET) YYYY-MM-DD. Leave blank for today."
+        description: "Optional: generate a specific date at 06:00 ET (YYYY-MM-DD)"
         required: false
         type: string
 
@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: btc-journal-daily
+  group: btc-journal-write
   cancel-in-progress: false
 
 jobs:
@@ -38,13 +38,10 @@ jobs:
         run: python generate_playbook.py
         env:
           FORCE_WRITE: ${{ github.event_name == 'workflow_dispatch' }}
-          TARGET_DATE_ET: ${{ inputs.date_et }}
+          DATE_ET: ${{ inputs.date_et }}
 
-      - name: Auto-score yesterday (paper test trade)
-        run: python scripts/score_yesterday.py
-
-      - name: Auto-score yesterday test trade
-        run: python scripts/auto_score_yesterday.py
+      - name: Score yesterday (paper test trade)
+        run: python scripts/score_day.py
 
       - name: Build dashboard
         run: python scripts/build_dashboard.py

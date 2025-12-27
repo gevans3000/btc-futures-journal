@@ -1,0 +1,50 @@
+﻿name: Backfill Journal History
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date_et:
+        description: "Start date (YYYY-MM-DD)"
+        required: true
+        type: string
+      end_date_et:
+        description: "End date (YYYY-MM-DD)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: btc-journal-write
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Generate + score range
+        run: python scripts/backfill_range.py
+        env:
+          START_DATE_ET: ${{ inputs.start_date_et }}
+          END_DATE_ET: ${{ inputs.end_date_et }}
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "btc-journal-bot"
+          git config user.email "btc-journal-bot@users.noreply.github.com"
+          git add journal || true
+          git diff --cached --quiet || git commit -m "Backfill: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git pull --rebase
+          git push

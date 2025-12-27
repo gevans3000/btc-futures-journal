@@ -2,29 +2,62 @@
 
 import json
 import os
-from datetime import datetime, timedelta
+import re
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import requests
 
 ET = ZoneInfo("America/New_York")
 
-def http_get_json(url: str, timeout: int = 20) -> dict:
-    r = requests.get(url, timeout=timeout, headers={"User-Agent": "btc-journal-bot/1.0"})
+def http_get_json(url: str, timeout: int = 25, params: dict | None = None) -> dict:
+    r = requests.get(url, timeout=timeout, params=params, headers={"User-Agent": "btc-journal-bot/1.0"})
     r.raise_for_status()
     return r.json()
 
 def in_run_window(now_et: datetime) -> bool:
-    # Write once/day around 06:00–06:10 ET
     start = now_et.replace(hour=6, minute=0, second=0, microsecond=0)
     end = start + timedelta(minutes=10)
     return start <= now_et < end
 
-def fetch_btc_spot_usd() -> float:
+def _ms(dt: datetime) -> int:
+    return int(dt.timestamp() * 1000)
+
+def fetch_btc_price_binance_at(now_et: datetime) -> float:
+    # Grab a small 1m window around 06:00 ET and use the candle at/just before that timestamp.
+    start = now_et - timedelta(minutes=6)
+    end = now_et + timedelta(minutes=1)
+
+    url = "https://api.binance.com/api/v3/klines"
+    params = {
+        "symbol": "BTCUSDT",
+        "interval": "1m",
+        "startTime": _ms(start.astimezone(timezone.utc)),
+        "endTime": _ms(end.astimezone(timezone.utc)),
+        "limit": 20,
+    }
+    data = http_get_json(url, params=params)
+    if not isinstance(data, list) or not data:
+        raise RuntimeError("Binance klines empty")
+
+    target_ms = _ms(now_et.astimezone(timezone.utc))
+    best = None
+    for k in data:
+        # kline: [openTime, open, high, low, close, ...]
+        ot = int(k[0])
+        if ot <= target_ms:
+            best = k
+        else:
+            break
+    if best is None:
+        best = data[0]
+    return float(best[4])  # close
+
+def fetch_btc_spot_usd_now() -> float:
     data = http_get_json("https://api.coinbase.com/v2/prices/BTC-USD/spot")
     return float(data["data"]["amount"])
 
-def fetch_okx_funding_snapshot() -> dict:
+def fetch_okx_funding_snapshot_now() -> dict:
     data = http_get_json("https://www.okx.com/api/v5/public/funding-rate?instId=BTC-USDT-SWAP")
     item = data["data"][0]
     return {
@@ -35,6 +68,7 @@ def fetch_okx_funding_snapshot() -> dict:
         "fundingTime": int(item["fundingTime"]),
         "ts": int(item["ts"]),
         "method": item.get("method"),
+        "asof": "okx_current",
     }
 
 def build_playbook(now_et: datetime, btc_spot: float, okx: dict) -> dict:
@@ -47,6 +81,7 @@ def build_playbook(now_et: datetime, btc_spot: float, okx: dict) -> dict:
 
     return {
         "run_timestamp_et": now_et.strftime("%Y-%m-%d %H:%M"),
+        "price_time_et": now_et.strftime("%Y-%m-%d %H:%M"),
         "btc_spot_usd": round(p, 2),
         "derivatives_okx": okx,
         "levels": {"support": [support], "resistance": [resistance]},
@@ -71,10 +106,6 @@ def build_playbook(now_et: datetime, btc_spot: float, okx: dict) -> dict:
                 "stop": round(resistance * 1.002, 2),
                 "tps": [round(p * 0.99, 2), round(p * 0.985, 2)],
             },
-        },
-        "prior_day_review": {
-            "status": "not_implemented",
-            "note": "Upgrade path: pull candles and auto-score whether triggers fired + MAE/MFE for yesterday.",
         },
     }
 
@@ -101,7 +132,6 @@ def write_daily_json(now_et: datetime, playbook: dict, overwrite: bool) -> tuple
         print(f"Already exists, skipping: {out_path}")
         return out_path, False
 
-    # Preserve any existing journal_updates (e.g., comments logged before the playbook ran)
     if os.path.exists(out_path):
         playbook["journal_updates"] = load_existing_updates(out_path)
 
@@ -112,23 +142,17 @@ def write_daily_json(now_et: datetime, playbook: dict, overwrite: bool) -> tuple
     print(f"Wrote: {out_path}")
     return out_path, True
 
-def resolve_now_et() -> datetime:
-    target = (os.getenv("TARGET_DATE_ET") or "").strip()
-    if not target:
-        return datetime.now(tz=ET)
-
-    try:
-        d = datetime.strptime(target, "%Y-%m-%d").date()
-    except ValueError:
-        raise SystemExit(f"TARGET_DATE_ET must be YYYY-MM-DD, got: {target!r}")
-
-    # Use 06:00 ET for deterministic file naming & consistency
-    return datetime(d.year, d.month, d.day, 6, 0, tzinfo=ET)
-
 def main() -> None:
-    now_et = resolve_now_et()
+    date_et = (os.getenv("DATE_ET") or "").strip()
     force = (os.getenv("FORCE_WRITE", "") or "").strip().lower() in {"1", "true", "yes", "y"}
     overwrite = (os.getenv("FORCE_OVERWRITE", "") or "").strip().lower() in {"1", "true", "yes", "y"}
+
+    if date_et:
+        y, m, d = [int(x) for x in date_et.split("-")]
+        now_et = datetime(y, m, d, 6, 0, tzinfo=ET)
+        force = True  # date override always allowed
+    else:
+        now_et = datetime.now(tz=ET)
 
     if (not force) and (not in_run_window(now_et)):
         print(f"Not in run window (ET): {now_et.isoformat()}")
@@ -139,8 +163,21 @@ def main() -> None:
         print(f"Today already exists, no overwrite: {out_path}")
         return
 
-    btc = fetch_btc_spot_usd()
-    okx = fetch_okx_funding_snapshot()
+    # Price
+    if date_et:
+        try:
+            btc = fetch_btc_price_binance_at(now_et)
+        except Exception:
+            btc = fetch_btc_spot_usd_now()
+    else:
+        btc = fetch_btc_spot_usd_now()
+
+    # Funding (keep current snapshot for now; historical can be added later without changing the rest)
+    try:
+        okx = fetch_okx_funding_snapshot_now()
+    except Exception:
+        okx = {"asof": "missing"}
+
     playbook = build_playbook(now_et, btc, okx)
     write_daily_json(now_et, playbook, overwrite=overwrite)
 
