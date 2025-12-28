@@ -1,0 +1,36 @@
+﻿name: Validate Journal JSON
+
+on:
+  push:
+    paths:
+      - "journal/**/*.json"
+      - ".github/workflows/validate-journal.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate required keys
+        run: |
+          python - <<'PY'
+          import json, glob, sys
+          required = {"paper_test_trade","paper_test_trade_review","risk_rules","levels","run_timestamp_et"}
+          bad = []
+          for p in glob.glob("journal/**/*.json", recursive=True):
+            with open(p,"r",encoding="utf-8") as f:
+              obj = json.load(f)
+            missing = sorted(required - set(obj.keys()))
+            if missing:
+              bad.append((p, missing))
+          if bad:
+            print("FAILED: missing required keys")
+            for p, missing in bad:
+              print(f"- {p}: {missing}")
+            sys.exit(1)
+          print("OK: all journal JSON files contain required keys.")
+          PY
