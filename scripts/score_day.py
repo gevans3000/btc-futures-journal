@@ -24,7 +24,7 @@ def fetch_15m_binance(date_et: str) -> list[dict]:
     start_et = datetime(y, m, d, 6, 0, tzinfo=ET)
     end_et = start_et + timedelta(days=1)
 
-    url = "https://api.binance.com/api/v3/klines"
+    url = "https://data-api.binance.vision/api/v3/klines"
     params = {
         "symbol": "BTCUSDT",
         "interval": "15m",
@@ -245,3 +245,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
