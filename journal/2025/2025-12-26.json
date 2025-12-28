@@ -37,8 +37,8 @@
     "window_start_et": "2025-12-26 06:00"
   },
   "btc_spot_usd": 87188.34,
-  "daily_R": 0.4757,
-  "daily_result": "long: TP2 (+0.476R)",
+  "daily_R": 0.601,
+  "daily_result": "long:tp_hit_88496.16",
   "derivatives_okx": {
     "fundingRate": 7.274430772e-07,
     "fundingTime": 1766793600000,
@@ -102,6 +102,18 @@
       "end": "2025-12-27 06:00:00 ET",
       "start": "2025-12-26 06:00:00 ET"
     }
+  },
+  "paper_test_trade_review": {
+    "R": 0.601,
+    "date_et": "2025-12-26",
+    "exit": "tp_hit_88496.16",
+    "exit_price": 88496.16,
+    "exit_time_et": "2025-12-26 06:00",
+    "max_adverse_R": 0.0,
+    "max_favorable_R": 0.749,
+    "scored_at_et": "2025-12-28 11:00:07",
+    "status": "scored",
+    "triggered": "long"
   },
   "prior_day_review": {
     "note": "Upgrade path: pull candles and auto-score whether triggers fired + MAE/MFE for yesterday.",

@@ -1,0 +1,65 @@
+{
+  "btc_spot_usd": 87770.32,
+  "daily_R": 0.601,
+  "daily_result": "long:tp_hit_89086.87",
+  "derivatives_okx": {
+    "asof": "okx_current",
+    "fundingRate": 3.57403266387e-05,
+    "fundingTime": 1766937600000,
+    "instId": "BTC-USDT-SWAP",
+    "method": "current_period",
+    "nextFundingTime": 1766966400000,
+    "premium": -0.0004815820482607,
+    "ts": 1766937558284
+  },
+  "levels": {
+    "resistance": [
+      89086.87
+    ],
+    "support": [
+      86453.76
+    ]
+  },
+  "paper_test_trade": {
+    "long": {
+      "entry": 88033.63,
+      "stop": 86280.85,
+      "tps": [
+        88648.02,
+        89086.87
+      ],
+      "trigger": "15m close >= 87945.86"
+    },
+    "short": {
+      "entry": 87507.0,
+      "stop": 89265.04,
+      "tps": [
+        86892.61,
+        86453.76
+      ],
+      "trigger": "15m close <= 87594.77"
+    },
+    "test_trade_id": "BTC-2025-12-15-0600-ET-TEST",
+    "type": "OCO_conditional"
+  },
+  "paper_test_trade_review": {
+    "R": 0.601,
+    "date_et": "2025-12-15",
+    "exit": "tp_hit_89086.87",
+    "exit_price": 89086.87,
+    "exit_time_et": "2025-12-15 06:00",
+    "max_adverse_R": 0.0,
+    "max_favorable_R": 1.065,
+    "scored_at_et": "2025-12-28 10:59:55",
+    "status": "scored",
+    "triggered": "long"
+  },
+  "price_time_et": "2025-12-15 06:00",
+  "risk_rules": {
+    "daily_stop_R": 2.0,
+    "funding_half_size_threshold": 0.0003,
+    "funding_no_trade_threshold": 0.001,
+    "max_risk_per_idea_R": 1.0
+  },
+  "run_timestamp_et": "2025-12-15 06:00"
+}

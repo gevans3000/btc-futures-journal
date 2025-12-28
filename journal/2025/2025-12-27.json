@@ -1,5 +1,7 @@
 {
   "btc_spot_usd": 87463.4,
+  "daily_R": 0.0,
+  "daily_result": "long:open",
   "derivatives_okx": {
     "fundingRate": 5.64730233046e-05,
     "fundingTime": 1766851200000,
@@ -38,6 +40,18 @@
     },
     "test_trade_id": "BTC-2025-12-27-0600-ET-TEST",
     "type": "OCO_conditional"
+  },
+  "paper_test_trade_review": {
+    "R": 0.0,
+    "date_et": "2025-12-27",
+    "exit": "open",
+    "exit_price": null,
+    "exit_time_et": null,
+    "max_adverse_R": 0.129,
+    "max_favorable_R": 0.163,
+    "scored_at_et": "2025-12-28 11:00:07",
+    "status": "scored",
+    "triggered": "long"
   },
   "prior_day_review": {
     "note": "Upgrade path: pull candles and auto-score whether triggers fired + MAE/MFE for yesterday.",
