@@ -20,11 +20,20 @@ jobs:
           python - <<'PY'
           import json, glob, sys
           required = {"paper_test_trade","paper_test_trade_review","risk_rules","levels","run_timestamp_et"}
+          # also require both trade directions exist
+          def check_nested(obj):
+              ptt = obj.get("paper_test_trade") or {}
+              if not isinstance(ptt, dict): return ["paper_test_trade:not_object"]
+              missing = []
+              if "long" not in ptt: missing.append("paper_test_trade.long")
+              if "short" not in ptt: missing.append("paper_test_trade.short")
+              return missing
           bad = []
           for p in glob.glob("journal/**/*.json", recursive=True):
             with open(p,"r",encoding="utf-8") as f:
               obj = json.load(f)
             missing = sorted(required - set(obj.keys()))
+            missing += check_nested(obj)
             if missing:
               bad.append((p, missing))
           if bad:
@@ -34,3 +43,4 @@ jobs:
             sys.exit(1)
           print("OK: all journal JSON files contain required keys.")
           PY
+
