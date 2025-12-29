@@ -2,9 +2,8 @@
 
 on:
   schedule:
-    # 06:00 AM ET year-round (DST-safe): one of these two will be 06:00 ET
-    - cron: "0 10 * * *"  # 06:00 ET during DST (UTC-4)
-    - cron: "0 11 * * *"  # 06:00 ET during Standard (UTC-5)
+    - cron: "0 10 * * *"
+    - cron: "0 11 * * *"
   workflow_dispatch:
     inputs:
       date_et:
@@ -23,33 +22,57 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
+      - name: Guard — only run scheduled job at 06:00 ET
+        id: guard
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          HOUR=$(TZ=America/New_York date +%H)
+          if [ "$HOUR" = "06" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping: scheduled run at hour=$HOUR ET (want 06)."
+          fi
+
       - name: Checkout
+        if: steps.guard.outputs.should_run == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Python
+        if: steps.guard.outputs.should_run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install deps
+        if: steps.guard.outputs.should_run == 'true'
         run: pip install -r requirements.txt
 
       - name: Generate playbook
+        if: steps.guard.outputs.should_run == 'true'
         run: python generate_playbook.py
         env:
           FORCE_WRITE: ${{ github.event_name == 'workflow_dispatch' }}
           DATE_ET: ${{ inputs.date_et }}
 
       - name: Score yesterday (paper test trade)
+        if: steps.guard.outputs.should_run == 'true'
         run: python scripts/score_day.py
 
       - name: Build dashboard
+        if: steps.guard.outputs.should_run == 'true'
         run: python scripts/build_dashboard.py
 
       - name: Build journal index + latest
+        if: steps.guard.outputs.should_run == 'true'
         run: python scripts/build_index.py
 
       - name: Commit & push if changed
+        if: steps.guard.outputs.should_run == 'true'
         run: |
           git config user.name "btc-journal-bot"
           git config user.email "btc-journal-bot@users.noreply.github.com"
