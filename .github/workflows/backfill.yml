@@ -11,6 +11,16 @@ on:
         description: "End date (YYYY-MM-DD)"
         required: true
         type: string
+      mode:
+        description: "generate_and_score or score_only"
+        required: false
+        default: "generate_and_score"
+        type: string
+      overwrite:
+        description: "Set to 1 to overwrite existing JSON in range (use for synthetic backfills)"
+        required: false
+        default: "0"
+        type: string
 
 permissions:
   contents: write
@@ -39,6 +49,8 @@ jobs:
         env:
           START_DATE_ET: ${{ inputs.start_date_et }}
           END_DATE_ET: ${{ inputs.end_date_et }}
+          MODE: ${{ inputs.mode }}
+          FORCE_OVERWRITE: ${{ inputs.overwrite }}
 
       - name: Commit & push if changed
         run: |
