@@ -6,6 +6,7 @@ Auto-generated after each run.
 
 | Date | BTC Spot (USD) | OKX Funding | Result | R | File |
 |---|---:|---:|---|---:|---|
+| 2025-12-29 | 87651.99 | 0.000100 |  |  | [2025-12-29.json](2025/2025-12-29.json) |
 | 2025-12-27 | 87463.4 | 0.000056 | not_implemented |  | [2025-12-27.json](2025/2025-12-27.json) |
 | 2025-12-26 | 87188.34 | 0.000001 | not_implemented |  | [2025-12-26.json](2025/2025-12-26.json) |
 | 2025-12-25 | 87374.99 | 0.000080 | not_implemented |  | [2025-12-25.json](2025/2025-12-25.json) |
