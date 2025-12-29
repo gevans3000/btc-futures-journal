@@ -150,7 +150,7 @@ def score(date_et: str) -> dict:
 
     # require entry fill AFTER trigger (OCO conditional arms, then entry must trade)
     fill_idx = None
-    for k in range(trig_idx, len(candles)):
+    for k in range(trig_idx + 1, len(candles)):
         c = candles[k]
         if triggered == "long":
             if c["high"] >= long_entry:
@@ -286,3 +286,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
