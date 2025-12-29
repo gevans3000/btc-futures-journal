@@ -1,7 +1,7 @@
 {
   "btc_spot_usd": 87770.32,
-  "daily_R": 0.601,
-  "daily_result": "long:tp_hit_89086.87",
+  "daily_R": 0.351,
+  "daily_result": "long:tp_hit_88648.02",
   "derivatives_okx": {
     "asof": "okx_current",
     "fundingRate": 3.57403266387e-05,
@@ -43,15 +43,18 @@
     "type": "OCO_conditional"
   },
   "paper_test_trade_review": {
-    "R": 0.601,
+    "R": 0.351,
     "date_et": "2025-12-14",
-    "exit": "tp_hit_89086.87",
-    "exit_price": 89086.87,
+    "exit": "tp_hit_88648.02",
+    "exit_price": 88648.02,
     "exit_time_et": "2025-12-14 06:00",
+    "fill_time_et": "2025-12-14 06:00",
+    "filled": true,
     "max_adverse_R": 0.0,
     "max_favorable_R": 1.038,
-    "scored_at_et": "2025-12-28 10:59:54",
+    "scored_at_et": "2025-12-29 12:03:16",
     "status": "scored",
+    "trigger_time_et": "2025-12-14 06:15",
     "triggered": "long"
   },
   "price_time_et": "2025-12-14 06:00",

@@ -37,8 +37,8 @@
     "window_start_et": "2025-12-26 06:00"
   },
   "btc_spot_usd": 87188.34,
-  "daily_R": 0.601,
-  "daily_result": "long:tp_hit_88496.16",
+  "daily_R": 0.351,
+  "daily_result": "long:tp_hit_88060.22",
   "derivatives_okx": {
     "fundingRate": 7.274430772e-07,
     "fundingTime": 1766793600000,
@@ -104,15 +104,18 @@
     }
   },
   "paper_test_trade_review": {
-    "R": 0.601,
+    "R": 0.351,
     "date_et": "2025-12-26",
-    "exit": "tp_hit_88496.16",
-    "exit_price": 88496.16,
+    "exit": "tp_hit_88060.22",
+    "exit_price": 88060.22,
     "exit_time_et": "2025-12-26 06:00",
+    "fill_time_et": "2025-12-26 06:00",
+    "filled": true,
     "max_adverse_R": 0.0,
     "max_favorable_R": 0.749,
-    "scored_at_et": "2025-12-28 11:00:07",
+    "scored_at_et": "2025-12-29 12:03:24",
     "status": "scored",
+    "trigger_time_et": "2025-12-26 06:15",
     "triggered": "long"
   },
   "prior_day_review": {
