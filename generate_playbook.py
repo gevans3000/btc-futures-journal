@@ -22,34 +22,45 @@ def in_run_window(now_et: datetime) -> bool:
 def _ms(dt: datetime) -> int:
     return int(dt.timestamp() * 1000)
 
-def fetch_btc_price_binance_at(now_et: datetime) -> float:
-    # Historical-safe endpoint (GitHub runners often fail on api.binance.com)
-    start = now_et - timedelta(minutes=6)
-    end = now_et + timedelta(minutes=1)
-
+def fetch_klines_vision(symbol: str, interval: str, start_et: datetime, end_et: datetime, limit: int = 1000):
     url = "https://data-api.binance.vision/api/v3/klines"
     params = {
-        "symbol": "BTCUSDT",
-        "interval": "1m",
-        "startTime": _ms(start.astimezone(timezone.utc)),
-        "endTime": _ms(end.astimezone(timezone.utc)),
-        "limit": 20,
+        "symbol": symbol,
+        "interval": interval,
+        "startTime": _ms(start_et.astimezone(timezone.utc)),
+        "endTime": _ms(end_et.astimezone(timezone.utc)),
+        "limit": limit,
     }
     data = http_get_json(url, params=params)
     if not isinstance(data, list) or not data:
         raise RuntimeError("Binance vision klines empty")
+    rows = []
+    for k in data:
+        rows.append({
+            "t_open_ms": int(k[0]),
+            "open": float(k[1]),
+            "high": float(k[2]),
+            "low": float(k[3]),
+            "close": float(k[4]),
+        })
+    return rows
+
+def fetch_btc_price_at_0600_et(now_et: datetime) -> float:
+    # use the 1m candle at/just before 06:00 ET
+    start = now_et - timedelta(minutes=6)
+    end = now_et + timedelta(minutes=1)
+    data = fetch_klines_vision("BTCUSDT", "1m", start, end, limit=20)
 
     target_ms = _ms(now_et.astimezone(timezone.utc))
     best = None
-    for k in data:
-        ot = int(k[0])
-        if ot <= target_ms:
-            best = k
+    for c in data:
+        if c["t_open_ms"] <= target_ms:
+            best = c
         else:
             break
     if best is None:
         best = data[0]
-    return float(best[4])  # close
+    return float(best["close"])
 
 def fetch_btc_spot_usd_now() -> float:
     data = http_get_json("https://api.coinbase.com/v2/prices/BTC-USD/spot")
@@ -69,36 +80,53 @@ def fetch_okx_funding_snapshot_now() -> dict:
         "asof": "okx_current",
     }
 
-def build_playbook(now_et: datetime, p: float, okx: dict, meta: dict) -> dict:
-    # Simple band (kept lightweight) but trades are now 1R-to-level
-    band = p * 0.015
-    support = round(p - band, 2)
-    resistance = round(p + band, 2)
+def atr14_15m(candles: list[dict]) -> float:
+    if len(candles) < 20:
+        raise RuntimeError("Not enough candles for ATR")
+    trs = []
+    prev_close = candles[0]["close"]
+    for c in candles[1:]:
+        hi, lo, cl = c["high"], c["low"], c["close"]
+        tr = max(hi - lo, abs(hi - prev_close), abs(lo - prev_close))
+        trs.append(tr)
+        prev_close = cl
+    window = trs[-14:]
+    atr = sum(window) / max(1, len(window))
+    return max(1.0, atr)
+
+def build_playbook(now_et: datetime, p: float, okx: dict, lookback_15m: list[dict], meta: dict) -> dict:
+    range_high = max(c["high"] for c in lookback_15m)
+    range_low = min(c["low"] for c in lookback_15m)
+    atr = atr14_15m(lookback_15m)
+
+    buffer = 0.25 * atr
+    risk = 1.5 * atr
+
+    # Breakout style (may result in no-trigger days; that's GOOD signal)
+    long_entry = round(range_high + buffer, 2)
+    long_stop = round(long_entry - risk, 2)
+    long_tp1 = round(long_entry + risk, 2)      # +1R
+    long_tp2 = round(long_entry + 2 * risk, 2)  # +2R
+
+    short_entry = round(range_low - buffer, 2)
+    short_stop = round(short_entry + risk, 2)
+    short_tp1 = round(short_entry - risk, 2)      # +1R
+    short_tp2 = round(short_entry - 2 * risk, 2)  # +2R
 
     test_trade_id = f"BTC-{now_et:%Y-%m-%d}-0600-ET-TEST"
 
-    # Entries near spot (same idea as before)
-    long_entry = round(p * 1.003, 2)
-    short_entry = round(p * 0.997, 2)
-
-    # TP1 anchored to structure; stop sized so TP1 == 1R
-    long_tp1 = resistance
-    long_stop = round(2 * long_entry - long_tp1, 2)  # 1R stop
-    long_risk = max(0.01, long_entry - long_stop)
-    long_tp2 = round(long_entry + 2 * long_risk, 2)  # 2R extension
-
-    short_tp1 = support
-    short_stop = round(short_entry + (short_entry - short_tp1), 2)  # 1R stop
-    short_risk = max(0.01, short_stop - short_entry)
-    short_tp2 = round(short_entry - 2 * short_risk, 2)  # 2R extension
-
     return {
-        "meta": meta,
+        "meta": {
+            **meta,
+            "strategy": "range_breakout_atr_15m",
+            "range_lookback_hours": 24,
+            "atr14_15m": round(atr, 2),
+        },
         "run_timestamp_et": now_et.strftime("%Y-%m-%d %H:%M"),
         "price_time_et": now_et.strftime("%Y-%m-%d %H:%M"),
         "btc_spot_usd": round(p, 2),
         "derivatives_okx": okx,
-        "levels": {"support": [support], "resistance": [resistance]},
+        "levels": {"support": [round(range_low, 2)], "resistance": [round(range_high, 2)]},
         "risk_rules": {
             "max_risk_per_idea_R": 1.0,
             "daily_stop_R": 2.0,
@@ -109,13 +137,13 @@ def build_playbook(now_et: datetime, p: float, okx: dict, meta: dict) -> dict:
             "test_trade_id": test_trade_id,
             "type": "OCO_conditional",
             "long": {
-                "trigger": f"15m close >= {round(p * 1.002, 2)}",
+                "trigger": f"15m close >= {long_entry}",
                 "entry": long_entry,
                 "stop": long_stop,
                 "tps": [long_tp1, long_tp2],
             },
             "short": {
-                "trigger": f"15m close <= {round(p * 0.998, 2)}",
+                "trigger": f"15m close <= {short_entry}",
                 "entry": short_entry,
                 "stop": short_stop,
                 "tps": [short_tp1, short_tp2],
@@ -124,9 +152,7 @@ def build_playbook(now_et: datetime, p: float, okx: dict, meta: dict) -> dict:
     }
 
 def out_path_for(now_et: datetime) -> str:
-    year = now_et.strftime("%Y")
-    day = now_et.strftime("%Y-%m-%d")
-    return os.path.join("journal", year, f"{day}.json")
+    return os.path.join("journal", now_et.strftime("%Y"), f"{now_et:%Y-%m-%d}.json")
 
 def load_existing_updates(path: str) -> list[dict]:
     try:
@@ -166,8 +192,7 @@ def main() -> None:
         y, m, d = [int(x) for x in date_et.split("-")]
         now_et = datetime(y, m, d, 6, 0, tzinfo=ET)
         force = True
-        # Backfill/historical should never use live fallback
-        strict_hist = True if strict_hist is False else strict_hist
+        strict_hist = True
         run_source = "backfill"
     else:
         now_et = datetime.now(tz=ET)
@@ -182,19 +207,20 @@ def main() -> None:
         print(f"Today already exists, no overwrite: {out_path}")
         return
 
-    # Price
-    if date_et:
-        try:
-            btc = fetch_btc_price_binance_at(now_et)
-            price_source = "binance_vision_1m_close_at_0600_et"
-        except Exception as e:
-            if strict_hist:
-                raise
-            btc = fetch_btc_spot_usd_now()
-            price_source = f"coinbase_fallback_due_to:{type(e).__name__}"
-    else:
+    # Price at 06:00 ET
+    try:
+        btc = fetch_btc_price_at_0600_et(now_et)
+        price_source = "binance_vision_1m_close_at_0600_et"
+    except Exception as e:
+        if strict_hist:
+            raise
         btc = fetch_btc_spot_usd_now()
-        price_source = "coinbase_spot_now"
+        price_source = f"coinbase_fallback_due_to:{type(e).__name__}"
+
+    # 24h lookback candles for range/ATR
+    start = now_et - timedelta(hours=24)
+    end = now_et
+    lookback_15m = fetch_klines_vision("BTCUSDT", "15m", start, end, limit=1000)
 
     # Funding snapshot (current)
     try:
@@ -204,13 +230,8 @@ def main() -> None:
         okx = {"asof": "missing"}
         funding_source = "missing"
 
-    meta = {
-        "source": run_source,
-        "price_source": price_source,
-        "funding_source": funding_source,
-    }
-
-    playbook = build_playbook(now_et, btc, okx, meta)
+    meta = {"source": run_source, "price_source": price_source, "funding_source": funding_source}
+    playbook = build_playbook(now_et, btc, okx, lookback_15m, meta)
     write_daily_json(now_et, playbook, overwrite=overwrite)
 
 if __name__ == "__main__":
