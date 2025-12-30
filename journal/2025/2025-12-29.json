@@ -1,5 +1,7 @@
 {
   "btc_spot_usd": 87651.99,
+  "daily_R": -0.292,
+  "daily_result": "short:expired_close",
   "derivatives_okx": {
     "asof": "okx_current",
     "fundingRate": 0.0001,
@@ -39,6 +41,21 @@
     },
     "test_trade_id": "BTC-2025-12-29-0600-ET-TEST",
     "type": "OCO_conditional"
+  },
+  "paper_test_trade_review": {
+    "R": -0.292,
+    "date_et": "2025-12-29",
+    "exit": "expired_close",
+    "exit_price": 87902.41,
+    "exit_time_et": "2025-12-30 06:15",
+    "fill_time_et": "2025-12-29 07:15",
+    "filled": true,
+    "max_adverse_R": 0.476,
+    "max_favorable_R": 0.332,
+    "scored_at_et": "2025-12-30 06:01:45",
+    "status": "scored",
+    "trigger_time_et": "2025-12-29 07:15",
+    "triggered": "short"
   },
   "price_time_et": "2025-12-29 06:09",
   "risk_rules": {
