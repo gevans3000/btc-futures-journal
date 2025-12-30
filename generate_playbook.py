@@ -232,7 +232,17 @@ def main() -> None:
 
     meta = {"source": run_source, "price_source": price_source, "funding_source": funding_source}
     playbook = build_playbook(now_et, btc, okx, lookback_15m, meta)
+    # Ensure unscored days show as pending (avoids None in METRICS)
+    playbook.setdefault("paper_test_trade_review", {
+      "status": "pending",
+      "date_et": now_et.strftime("%Y-%m-%d"),
+      "triggered": "pending",
+      "filled": False,
+      "exit": "pending",
+      "R": 0.0
+    })
     write_daily_json(now_et, playbook, overwrite=overwrite)
 
 if __name__ == "__main__":
     main()
+
