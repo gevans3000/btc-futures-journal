@@ -1,10 +1,10 @@
 {
-  "asof_utc": "2025-12-30T16:34:59Z",
+  "asof_utc": "2025-12-30T16:44:38Z",
   "avg_R_per_day": 0.29,
   "exit_breakdown": {
-    "None": 1,
     "expired_close": 1,
     "no_trigger": 5,
+    "pending": 1,
     "stopped": 2,
     "tp_hit_84953.58": 1,
     "tp_hit_86803.0": 1,
@@ -17,10 +17,11 @@
   "expectancy_R_per_trade": 0.464,
   "loss_trades": 3,
   "no_trade_days": 5,
+  "pending_days": 1,
   "side_breakdown": {
-    "None": 1,
     "long": 3,
     "none": 5,
+    "pending": 1,
     "short": 7
   },
   "total_R": 4.642,

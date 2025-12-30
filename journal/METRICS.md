@@ -1,7 +1,7 @@
 # Metrics (Auto)
 - Window: last **16** days
 - Total: **4.642R** | Avg/day: **0.29R**
-- Trade days: **10** | No-trade days: **5**
+- Trade days: **10** | No-trade days: **5** | Pending: **1**
 - Win rate (trades): **70.0%** | Expectancy: **0.464R/trade**
 
 ## Exit breakdown
@@ -9,8 +9,8 @@
 |---|---:|
 | no_trigger | 5 |
 | stopped | 2 |
-| None | 1 |
 | expired_close | 1 |
+| pending | 1 |
 | tp_hit_84953.58 | 1 |
 | tp_hit_86803.0 | 1 |
 | tp_hit_87321.0 | 1 |
@@ -25,7 +25,7 @@
 | short | 7 |
 | none | 5 |
 | long | 3 |
-| None | 1 |
+| pending | 1 |
 
 ## Last days
 | Date | Side | Filled | Exit | R |
@@ -43,4 +43,4 @@
 | 2025-12-26 | short | True | stopped | -1.0 |
 | 2025-12-27 | none | False | no_trigger | 0.0 |
 | 2025-12-29 | short | True | expired_close | -0.358 |
-| 2025-12-30 | None | False | None | 0.0 |
+| 2025-12-30 | pending | False | pending | 0.0 |
