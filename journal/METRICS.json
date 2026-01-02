@@ -1,11 +1,11 @@
 {
-  "asof_utc": "2026-01-01T11:01:35Z",
-  "avg_R_per_day": 0.369,
+  "asof_utc": "2026-01-02T11:01:33Z",
+  "avg_R_per_day": 0.297,
   "exit_breakdown": {
     "expired_close": 1,
     "no_trigger": 5,
     "pending": 1,
-    "stopped": 2,
+    "stopped": 3,
     "tp_hit_84953.58": 1,
     "tp_hit_86803.0": 1,
     "tp_hit_87321.0": 1,
@@ -16,19 +16,19 @@
     "tp_hit_89263.29": 1,
     "tp_hit_90384.19": 1
   },
-  "expectancy_R_per_trade": 0.553,
-  "loss_trades": 3,
+  "expectancy_R_per_trade": 0.434,
+  "loss_trades": 4,
   "no_trade_days": 5,
   "pending_days": 1,
   "side_breakdown": {
-    "long": 4,
+    "long": 5,
     "none": 5,
     "pending": 1,
     "short": 8
   },
-  "total_R": 6.642,
-  "trade_days": 12,
-  "win_rate_on_trades": 75.0,
+  "total_R": 5.642,
+  "trade_days": 13,
+  "win_rate_on_trades": 69.2,
   "win_trades": 9,
-  "window_days": 18
+  "window_days": 19
 }
