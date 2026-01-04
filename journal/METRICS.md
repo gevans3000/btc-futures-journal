@@ -1,8 +1,8 @@
 # Metrics (Auto)
-- Window: last **20** days
-- Total: **6.642R** | Avg/day: **0.332R**
-- Trade days: **14** | No-trade days: **5** | Pending: **1**
-- Win rate (trades): **71.4%** | Expectancy: **0.474R/trade**
+- Window: last **21** days
+- Total: **7.642R** | Avg/day: **0.364R**
+- Trade days: **15** | No-trade days: **5** | Pending: **1**
+- Win rate (trades): **73.3%** | Expectancy: **0.509R/trade**
 
 ## Exit breakdown
 | Item | Count |
@@ -21,19 +21,19 @@
 | tp_hit_89263.29 | 1 |
 | tp_hit_90275.87 | 1 |
 | tp_hit_90384.19 | 1 |
+| tp_hit_91227.49 | 1 |
 
 ## Triggered side breakdown
 | Item | Count |
 |---|---:|
 | short | 8 |
-| long | 6 |
+| long | 7 |
 | none | 5 |
 | pending | 1 |
 
 ## Last days
 | Date | Side | Filled | Exit | R |
 |---|---|---|---|---:|
-| 2025-12-20 | none | False | no_trigger | 0.0 |
 | 2025-12-21 | short | True | stopped | -1.0 |
 | 2025-12-22 | long | True | tp_hit_90384.19 | 1.0 |
 | 2025-12-23 | short | True | tp_hit_86803.0 | 1.0 |
@@ -46,4 +46,5 @@
 | 2025-12-31 | short | True | tp_hit_87530.99 | 1.0 |
 | 2026-01-01 | long | True | stopped | -1.0 |
 | 2026-01-02 | long | True | tp_hit_90275.87 | 1.0 |
-| 2026-01-03 | pending | False | pending | 0.0 |
+| 2026-01-03 | long | True | tp_hit_91227.49 | 1.0 |
+| 2026-01-04 | pending | False | pending | 0.0 |
