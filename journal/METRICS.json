@@ -1,10 +1,19 @@
 {
-  "asof_utc": "2026-01-05T16:05:03Z",
-  "avg_R_per_day": 0.395,
+  "avg_R_per_day": 0.406011,
+  "data_fidelity": {
+    "funding_source_counts": {
+      "okx_current": 90
+    },
+    "price_source_counts": {
+      "binance_vision_1m_close_at_0600_et": 90
+    },
+    "source_counts": {
+      "backfill": 90
+    }
+  },
   "exit_breakdown": {
     "expired_close": 1,
     "no_trigger": 26,
-    "pending": 1,
     "stopped": 13,
     "tp_hit_100151.47": 1,
     "tp_hit_100931.04": 1,
@@ -26,6 +35,7 @@
     "tp_hit_113149.34": 1,
     "tp_hit_119226.93": 1,
     "tp_hit_120655.7": 1,
+    "tp_hit_122904.79": 1,
     "tp_hit_84953.58": 1,
     "tp_hit_85248.7": 1,
     "tp_hit_86197.34": 1,
@@ -56,19 +66,111 @@
     "tp_hit_94423.72": 1,
     "tp_hit_95208.1": 1
   },
-  "expectancy_R_per_trade": 0.564,
-  "loss_trades": 14,
+  "expectancy_R_per_trade": 0.570953,
+  "generated_at_et": "2026-01-05 11:29:11",
+  "last_days": [
+    {
+      "R": 0.0,
+      "date": "2025-12-24",
+      "exit": "no_trigger",
+      "filled": false,
+      "side": "none"
+    },
+    {
+      "R": 1.0,
+      "date": "2025-12-25",
+      "exit": "tp_hit_88289.75",
+      "filled": true,
+      "side": "long"
+    },
+    {
+      "R": -1.0,
+      "date": "2025-12-26",
+      "exit": "stopped",
+      "filled": true,
+      "side": "short"
+    },
+    {
+      "R": 0.0,
+      "date": "2025-12-27",
+      "exit": "no_trigger",
+      "filled": false,
+      "side": "none"
+    },
+    {
+      "R": 1.0,
+      "date": "2025-12-28",
+      "exit": "tp_hit_88170.71",
+      "filled": true,
+      "side": "long"
+    },
+    {
+      "R": 1.0,
+      "date": "2025-12-29",
+      "exit": "tp_hit_86926.94",
+      "filled": true,
+      "side": "short"
+    },
+    {
+      "R": 1.0,
+      "date": "2025-12-30",
+      "exit": "tp_hit_88592.4",
+      "filled": true,
+      "side": "long"
+    },
+    {
+      "R": 1.0,
+      "date": "2025-12-31",
+      "exit": "tp_hit_87527.77",
+      "filled": true,
+      "side": "short"
+    },
+    {
+      "R": -1.0,
+      "date": "2026-01-01",
+      "exit": "stopped",
+      "filled": true,
+      "side": "long"
+    },
+    {
+      "R": 1.0,
+      "date": "2026-01-02",
+      "exit": "tp_hit_90286.97",
+      "filled": true,
+      "side": "long"
+    },
+    {
+      "R": 1.0,
+      "date": "2026-01-03",
+      "exit": "tp_hit_91236.91",
+      "filled": true,
+      "side": "long"
+    },
+    {
+      "R": 1.0,
+      "date": "2026-01-04",
+      "exit": "tp_hit_92089.73",
+      "filled": true,
+      "side": "long"
+    }
+  ],
   "no_trade_days": 26,
-  "pending_days": 1,
+  "pending_days": 0,
   "side_breakdown": {
     "long": 28,
-    "none": 25,
-    "pending": 1,
+    "none": 26,
     "short": 36
   },
-  "total_R": 35.541,
-  "trade_days": 63,
-  "win_rate_on_trades": 77.8,
-  "win_trades": 49,
+  "stop_diagnostics": {
+    "stopped_count": 13,
+    "stopped_overshoot_gt_1_0R": 13,
+    "stopped_overshoot_gt_1_5R": 3,
+    "stopped_reached_0_5R": 7,
+    "stopped_reached_0_75R": 2,
+    "stopped_reached_1_0R": 0
+  },
+  "total_R": 36.541,
+  "trade_days": 64,
+  "win_rate_trades": 78.125,
   "window_days": 90
 }
