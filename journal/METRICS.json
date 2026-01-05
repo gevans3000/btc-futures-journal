@@ -1,10 +1,9 @@
 {
-  "asof_utc": "2026-01-05T16:01:17Z",
+  "asof_utc": "2026-01-05T16:05:03Z",
   "avg_R_per_day": 0.395,
   "exit_breakdown": {
-    "armed_not_filled": 1,
     "expired_close": 1,
-    "no_trigger": 25,
+    "no_trigger": 26,
     "pending": 1,
     "stopped": 13,
     "tp_hit_100151.47": 1,
@@ -59,7 +58,7 @@
   },
   "expectancy_R_per_trade": 0.564,
   "loss_trades": 14,
-  "no_trade_days": 25,
+  "no_trade_days": 26,
   "pending_days": 1,
   "side_breakdown": {
     "long": 28,

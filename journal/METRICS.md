@@ -1,15 +1,14 @@
 # Metrics (Auto)
 - Window: last **90** days
 - Total: **35.541R** | Avg/day: **0.395R**
-- Trade days: **63** | No-trade days: **25** | Pending: **1**
+- Trade days: **63** | No-trade days: **26** | Pending: **1**
 - Win rate (trades): **77.8%** | Expectancy: **0.564R/trade**
 
 ## Exit breakdown
 | Item | Count |
 |---|---:|
-| no_trigger | 25 |
+| no_trigger | 26 |
 | stopped | 13 |
-| armed_not_filled | 1 |
 | expired_close | 1 |
 | pending | 1 |
 | tp_hit_100151.47 | 1 |
