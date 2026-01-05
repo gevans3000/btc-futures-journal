@@ -65,7 +65,7 @@ def build(days: int = 30) -> tuple[dict, str]:
             "date": r.get("date_et", date_fb),
             "triggered": r.get("triggered", "pending"),
             "filled": bool(r.get("filled", False)),
-            "exit": r.get("exit", "pending"),
+            "exit": ("no_trigger" if r.get("exit")=="armed_not_filled" else r.get("exit","pending")),
             "R": _safe_float(r.get("R"), 0.0),
         })
 
@@ -138,4 +138,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
