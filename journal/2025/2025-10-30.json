@@ -58,9 +58,10 @@
     "exit_time_et": "2025-10-30 10:45",
     "fill_time_et": "2025-10-30 09:45",
     "filled": true,
+    "management": "be_after_0.5R_next_candle",
     "max_adverse_R": 1.038,
     "max_favorable_R": 0.815,
-    "scored_at_et": "2026-01-05 10:58:14",
+    "scored_at_et": "2026-01-05 11:44:51",
     "status": "scored",
     "trigger_time_et": "2025-10-30 09:45",
     "triggered": "short"

@@ -59,10 +59,10 @@
     "exit_time_et": null,
     "fill_time_et": "2026-01-04 19:15",
     "filled": true,
-    "management": "be_after_0.5R",
+    "management": "be_after_0.5R_next_candle",
     "max_adverse_R": 0.0,
     "max_favorable_R": 0.0,
-    "scored_at_et": "2026-01-05 11:34:54",
+    "scored_at_et": "2026-01-05 11:45:40",
     "status": "scored",
     "trigger_time_et": "2026-01-04 19:15",
     "triggered": "long"

@@ -58,9 +58,10 @@
     "exit_time_et": "2025-11-17 13:15",
     "fill_time_et": "2025-11-17 12:45",
     "filled": true,
+    "management": "be_after_0.5R_next_candle",
     "max_adverse_R": 0.746,
     "max_favorable_R": 1.288,
-    "scored_at_et": "2026-01-05 10:58:24",
+    "scored_at_et": "2026-01-05 11:45:05",
     "status": "scored",
     "trigger_time_et": "2025-11-17 12:45",
     "triggered": "short"
