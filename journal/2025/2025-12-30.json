@@ -1,48 +1,52 @@
 {
-  "btc_spot_usd": 87817.99,
+  "btc_spot_usd": 87928.98,
   "daily_R": 1.0,
-  "daily_result": "long:tp_hit_89135.25",
+  "daily_result": "long:tp_hit_88592.4",
   "derivatives_okx": {
     "asof": "okx_current",
-    "fundingRate": -5.028926e-10,
-    "fundingTime": 1767110400000,
+    "fundingRate": 3.81682499784e-05,
+    "fundingTime": 1767628800000,
     "instId": "BTC-USDT-SWAP",
     "method": "current_period",
-    "nextFundingTime": 1767139200000,
-    "premium": -0.0003923428325788,
-    "ts": 1767092465304
+    "nextFundingTime": 1767657600000,
+    "premium": -0.0006037927127439,
+    "ts": 1767628624294
   },
+  "journal_updates": [],
   "levels": {
     "resistance": [
-      89135.25
+      88224.76
     ],
     "support": [
-      86500.72
+      86806.5
     ]
   },
   "meta": {
+    "atr14_15m": 210.08,
     "funding_source": "okx_current",
-    "price_source": "coinbase_spot_now",
-    "source": "daily"
+    "price_source": "binance_vision_1m_close_at_0600_et",
+    "range_lookback_hours": 24,
+    "source": "backfill",
+    "strategy": "range_breakout_atr_15m"
   },
   "paper_test_trade": {
     "long": {
-      "entry": 88081.44,
-      "stop": 87027.63,
+      "entry": 88277.28,
+      "stop": 87962.16,
       "tps": [
-        89135.25,
-        90189.06
+        88592.4,
+        88907.52
       ],
-      "trigger": "15m close >= 87993.62"
+      "trigger": "15m close >= 88277.28"
     },
     "short": {
-      "entry": 87554.53,
-      "stop": 88608.34,
+      "entry": 86753.98,
+      "stop": 87069.1,
       "tps": [
-        86500.72,
-        85446.91
+        86438.86,
+        86123.74
       ],
-      "trigger": "15m close <= 87642.35"
+      "trigger": "15m close <= 86753.98"
     },
     "test_trade_id": "BTC-2025-12-30-0600-ET-TEST",
     "type": "OCO_conditional"
@@ -50,24 +54,24 @@
   "paper_test_trade_review": {
     "R": 1.0,
     "date_et": "2025-12-30",
-    "exit": "tp_hit_89135.25",
-    "exit_price": 89135.25,
-    "exit_time_et": "2025-12-30 10:45",
-    "fill_time_et": "2025-12-30 07:15",
+    "exit": "tp_hit_88592.4",
+    "exit_price": 88592.4,
+    "exit_time_et": "2025-12-30 10:00",
+    "fill_time_et": "2025-12-30 10:00",
     "filled": true,
-    "max_adverse_R": 0.235,
-    "max_favorable_R": 1.023,
-    "scored_at_et": "2025-12-31 06:09:18",
+    "max_adverse_R": 0.232,
+    "max_favorable_R": 2.52,
+    "scored_at_et": "2026-01-05 10:58:49",
     "status": "scored",
-    "trigger_time_et": "2025-12-30 06:15",
+    "trigger_time_et": "2025-12-30 10:00",
     "triggered": "long"
   },
-  "price_time_et": "2025-12-30 06:01",
+  "price_time_et": "2025-12-30 06:00",
   "risk_rules": {
     "daily_stop_R": 2.0,
     "funding_half_size_threshold": 0.0003,
     "funding_no_trade_threshold": 0.001,
     "max_risk_per_idea_R": 1.0
   },
-  "run_timestamp_et": "2025-12-30 06:01"
+  "run_timestamp_et": "2025-12-30 06:00"
 }

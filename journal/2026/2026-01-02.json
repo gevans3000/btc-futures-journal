@@ -1,17 +1,18 @@
 {
-  "btc_spot_usd": 89610.01,
+  "btc_spot_usd": 89620.14,
   "daily_R": 1.0,
-  "daily_result": "long:tp_hit_90275.87",
+  "daily_result": "long:tp_hit_90286.97",
   "derivatives_okx": {
     "asof": "okx_current",
-    "fundingRate": 7.3268312956e-05,
-    "fundingTime": 1767369600000,
+    "fundingRate": 3.81682499784e-05,
+    "fundingTime": 1767628800000,
     "instId": "BTC-USDT-SWAP",
     "method": "current_period",
-    "nextFundingTime": 1767398400000,
-    "premium": -0.0004675546112714,
-    "ts": 1767351662504
+    "nextFundingTime": 1767657600000,
+    "premium": -0.0006037927127439,
+    "ts": 1767628624294
   },
+  "journal_updates": [],
   "levels": {
     "resistance": [
       89942.44
@@ -21,31 +22,31 @@
     ]
   },
   "meta": {
-    "atr14_15m": 190.53,
+    "atr14_15m": 196.88,
     "funding_source": "okx_current",
     "price_source": "binance_vision_1m_close_at_0600_et",
     "range_lookback_hours": 24,
-    "source": "daily",
+    "source": "backfill",
     "strategy": "range_breakout_atr_15m"
   },
   "paper_test_trade": {
     "long": {
-      "entry": 89990.07,
-      "stop": 89704.27,
+      "entry": 89991.66,
+      "stop": 89696.35,
       "tps": [
-        90275.87,
-        90561.66
+        90286.97,
+        90582.29
       ],
-      "trigger": "15m close >= 89990.07"
+      "trigger": "15m close >= 89991.66"
     },
     "short": {
-      "entry": 87763.03,
-      "stop": 88048.83,
+      "entry": 87761.44,
+      "stop": 88056.75,
       "tps": [
-        87477.23,
-        87191.44
+        87466.13,
+        87170.81
       ],
-      "trigger": "15m close <= 87763.03"
+      "trigger": "15m close <= 87761.44"
     },
     "test_trade_id": "BTC-2026-01-02-0600-ET-TEST",
     "type": "OCO_conditional"
@@ -53,24 +54,24 @@
   "paper_test_trade_review": {
     "R": 1.0,
     "date_et": "2026-01-02",
-    "exit": "tp_hit_90275.87",
-    "exit_price": 90275.87,
+    "exit": "tp_hit_90286.97",
+    "exit_price": 90286.97,
     "exit_time_et": "2026-01-02 11:30",
     "fill_time_et": "2026-01-02 11:30",
     "filled": true,
     "max_adverse_R": 0.0,
-    "max_favorable_R": 2.834,
-    "scored_at_et": "2026-01-03 06:01:30",
+    "max_favorable_R": 2.737,
+    "scored_at_et": "2026-01-05 10:58:51",
     "status": "scored",
     "trigger_time_et": "2026-01-02 11:30",
     "triggered": "long"
   },
-  "price_time_et": "2026-01-02 06:01",
+  "price_time_et": "2026-01-02 06:00",
   "risk_rules": {
     "daily_stop_R": 2.0,
     "funding_half_size_threshold": 0.0003,
     "funding_no_trade_threshold": 0.001,
     "max_risk_per_idea_R": 1.0
   },
-  "run_timestamp_et": "2026-01-02 06:01"
+  "run_timestamp_et": "2026-01-02 06:00"
 }

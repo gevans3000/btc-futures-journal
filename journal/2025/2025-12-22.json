@@ -4,13 +4,13 @@
   "daily_result": "long:tp_hit_90384.19",
   "derivatives_okx": {
     "asof": "okx_current",
-    "fundingRate": 3.2171508041e-05,
-    "fundingTime": 1767110400000,
+    "fundingRate": 3.81682499784e-05,
+    "fundingTime": 1767628800000,
     "instId": "BTC-USDT-SWAP",
     "method": "current_period",
-    "nextFundingTime": 1767139200000,
-    "premium": -0.0003683232878085,
-    "ts": 1767103390423
+    "nextFundingTime": 1767657600000,
+    "premium": -0.0006037927127439,
+    "ts": 1767628624294
   },
   "journal_updates": [],
   "levels": {
@@ -61,7 +61,7 @@
     "filled": true,
     "max_adverse_R": 0.0,
     "max_favorable_R": 1.501,
-    "scored_at_et": "2025-12-30 09:03:51",
+    "scored_at_et": "2026-01-05 10:58:44",
     "status": "scored",
     "trigger_time_et": "2025-12-22 07:15",
     "triggered": "long"
