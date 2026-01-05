@@ -3,7 +3,6 @@
 import json
 import os
 import re
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -45,7 +44,6 @@ def fetch_15m_binance_vision(date_et: str) -> list[dict]:
     return rows
 
 def parse_trigger(s: str) -> tuple[str, float] | None:
-    # e.g. "15m close >= 87362.71" or "<="
     m = re.search(r"(>=|<=)\s*([0-9]+(?:\.[0-9]+)?)", s or "")
     if not m:
         return None
@@ -88,7 +86,6 @@ def score(date_et: str) -> dict:
         save_json(path, j)
         return {"status": "no_trigger_fields", "path": path}
 
-    # Required numeric fields
     long_entry = float(long["entry"]); long_stop = float(long["stop"])
     long_tps = [float(x) for x in (long.get("tps") or [])]
     short_entry = float(short["entry"]); short_stop = float(short["stop"])
@@ -102,7 +99,7 @@ def score(date_et: str) -> dict:
         save_json(path, j)
         return {"status": "no_candles", "path": path}
 
-    # Find earliest trigger by 15m CLOSE
+    # earliest trigger by 15m CLOSE
     long_idx = None
     short_idx = None
     for i, c in enumerate(candles):
@@ -111,10 +108,8 @@ def score(date_et: str) -> dict:
         if short_idx is None and c["close"] <= st[1]:
             short_idx = i
 
-    triggered = None
-    trig_idx = None
     if long_idx is None and short_idx is None:
-        triggered = "none"
+        triggered, trig_idx = "none", None
     elif long_idx is None:
         triggered, trig_idx = "short", short_idx
     elif short_idx is None:
@@ -131,9 +126,9 @@ def score(date_et: str) -> dict:
     trig_time = None
     if trig_idx is not None:
         trig_open = datetime.fromtimestamp(candles[trig_idx]["t_open_ms"]/1000, tz=timezone.utc).astimezone(ET)
-        trig_time = trig_open + timedelta(minutes=15)  # trigger occurs on candle close
+        trig_time = trig_open + timedelta(minutes=15)  # candle close
 
-    # Default: BE at +0.5R (can override with env BE_AT_R; set to 0 to disable)
+    # Conservative BE: arm on candle CLOSE; effective from NEXT candle
     try:
         be_at_r = float((os.getenv("BE_AT_R") or "0.5").strip())
     except Exception:
@@ -155,7 +150,7 @@ def score(date_et: str) -> dict:
         "R": 0.0,
         "max_favorable_R": 0.0,
         "max_adverse_R": 0.0,
-        "management": (f"be_after_{be_at_r}R" if be_at_r > 0 else "none"),
+        "management": (f"be_after_{be_at_r}R_next_candle" if be_at_r > 0 else "none"),
     }
 
     if triggered in ("none", "conflict"):
@@ -166,15 +161,14 @@ def score(date_et: str) -> dict:
         save_json(path, j)
         return {"status": triggered, "path": path}
 
-    # 1) Fill must occur AFTER trigger close candle
+    # Fill must occur AFTER trigger candle close => start scanning at trig_idx+1
     fill_idx = None
     fill_time = None
-
     scan_start = (trig_idx + 1) if trig_idx is not None else 0
+
     for k in range(scan_start, len(candles)):
         c = candles[k]
         t_open = datetime.fromtimestamp(c["t_open_ms"]/1000, tz=timezone.utc).astimezone(ET)
-
         if triggered == "long":
             if c["high"] >= long_entry:
                 fill_idx = k
@@ -197,9 +191,8 @@ def score(date_et: str) -> dict:
     review["filled"] = True
     review["fill_time_et"] = _fmt(fill_time)
 
-    # 2) Simulate after fill candle opens (still simplified: intrabar ordering unknown)
-    risk_long = abs(long_entry - long_stop)
-    risk_short = abs(short_stop - short_entry)
+    risk_long = abs(long_entry - long_stop) or 1.0
+    risk_short = abs(short_stop - short_entry) or 1.0
 
     max_fav_R = 0.0
     max_adv_R = 0.0
@@ -208,12 +201,8 @@ def score(date_et: str) -> dict:
     exit_price = None
     exit_time = None
 
-    be_active = False
-    be_armed_idx = None
-    stop_level_long = long_stop
-    stop_level_short = short_stop
+    be_effective_from = None  # candle index from which stop=entry is used
 
-    # Expiry: 17:00 ET that day
     y, m, d = [int(x) for x in date_et.split("-")]
     expiry = datetime(y, m, d, 17, 0, tzinfo=ET)
 
@@ -231,33 +220,28 @@ def score(date_et: str) -> dict:
         last_close_time = t_open + timedelta(minutes=15)
 
         if triggered == "long":
-            risk = risk_long if risk_long > 0 else 1.0
+            risk = risk_long
             max_fav_R = max(max_fav_R, (hi - long_entry) / risk)
             max_adv_R = max(max_adv_R, (long_entry - lo) / risk)
 
-            # Activate BE only on candles AFTER the fill candle (conservative)
-            if (not be_active) and be_at_r > 0 and k > fill_idx:
-                be_level = long_entry + be_at_r * risk
-                if hi >= be_level:
-                    be_active = True
-                    be_armed_idx = k
-                    stop_level_long = long_entry  # move stop to entry
+            # current stop (BE only effective from next candle after arming)
+            cur_stop = long_entry if (be_effective_from is not None and k >= be_effective_from) else long_stop
 
-            stop_hit = lo <= stop_level_long and (not (be_active and be_armed_idx == k))
+            # stop/TP checks (intrabar ambiguity -> assume stop first)
+            stop_hit = lo <= cur_stop
             tp_hit = None
             for tp in sorted(long_tps):
                 if hi >= tp:
                     tp_hit = tp
 
-            # Conservative on same-candle ambiguity: if stop and TP both touched, assume stop first.
             if stop_hit and tp_hit is not None:
                 exit_reason = "ambiguous_stop_and_tp_same_candle"
-                exit_price = stop_level_long
+                exit_price = cur_stop
                 exit_time = t_open
                 break
             if stop_hit:
-                exit_reason = "stopped_be" if (be_active and stop_level_long == long_entry) else "stopped"
-                exit_price = stop_level_long
+                exit_reason = "stopped_be" if cur_stop == long_entry else "stopped"
+                exit_price = cur_stop
                 exit_time = t_open
                 break
             if tp_hit is not None:
@@ -266,19 +250,20 @@ def score(date_et: str) -> dict:
                 exit_time = t_open
                 break
 
-        else:  # short
-            risk = risk_short if risk_short > 0 else 1.0
+            # Arm BE on candle CLOSE, effective next candle
+            if be_at_r > 0 and be_effective_from is None and k > fill_idx:
+                be_level = long_entry + be_at_r * risk
+                if cl >= be_level:
+                    be_effective_from = k + 1
+
+        else:
+            risk = risk_short
             max_fav_R = max(max_fav_R, (short_entry - lo) / risk)
             max_adv_R = max(max_adv_R, (hi - short_entry) / risk)
 
-            if (not be_active) and be_at_r > 0 and k > fill_idx:
-                be_level = short_entry - be_at_r * risk
-                if lo <= be_level:
-                    be_active = True
-                    be_armed_idx = k
-                    stop_level_short = short_entry
+            cur_stop = short_entry if (be_effective_from is not None and k >= be_effective_from) else short_stop
 
-            stop_hit = hi >= stop_level_short and (not (be_active and be_armed_idx == k))
+            stop_hit = hi >= cur_stop
             tp_hit = None
             for tp in sorted(short_tps, reverse=True):
                 if lo <= tp:
@@ -286,12 +271,12 @@ def score(date_et: str) -> dict:
 
             if stop_hit and tp_hit is not None:
                 exit_reason = "ambiguous_stop_and_tp_same_candle"
-                exit_price = stop_level_short
+                exit_price = cur_stop
                 exit_time = t_open
                 break
             if stop_hit:
-                exit_reason = "stopped_be" if (be_active and stop_level_short == short_entry) else "stopped"
-                exit_price = stop_level_short
+                exit_reason = "stopped_be" if cur_stop == short_entry else "stopped"
+                exit_price = cur_stop
                 exit_time = t_open
                 break
             if tp_hit is not None:
@@ -300,19 +285,22 @@ def score(date_et: str) -> dict:
                 exit_time = t_open
                 break
 
-    # Expiry settlement if still open
+            if be_at_r > 0 and be_effective_from is None and k > fill_idx:
+                be_level = short_entry - be_at_r * risk
+                if cl <= be_level:
+                    be_effective_from = k + 1
+
     if exit_price is None and last_close is not None:
         exit_reason = "expired_close"
         exit_price = float(last_close)
         exit_time = last_close_time if last_close_time is not None else expiry
 
-    # Compute R
     R = 0.0
     if exit_price is not None:
         if triggered == "long":
-            R = (exit_price - long_entry) / (risk_long if risk_long > 0 else 1.0)
+            R = (exit_price - long_entry) / risk_long
         else:
-            R = (short_entry - exit_price) / (risk_short if risk_short > 0 else 1.0)
+            R = (short_entry - exit_price) / risk_short
 
     review.update({
         "exit": exit_reason,
