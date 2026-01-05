@@ -9,3 +9,5 @@ scripts/autosync.ps1
 DefiLlama_*.csv
 DefiLlama_*.json
 
+
+.local_untracked_backup/

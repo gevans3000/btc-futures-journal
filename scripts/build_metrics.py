@@ -126,7 +126,7 @@ def build(days: int = 30) -> tuple[dict, str]:
     return stats, "".join(lines)
 
 def main():
-    days = int((os.getenv("METRICS_DAYS") or "30").strip())
+    days = int((os.getenv("METRICS_DAYS") or "90").strip())
     stats, md = build(days=days)
     os.makedirs("journal", exist_ok=True)
     with open("journal/METRICS.json", "w", encoding="utf-8") as f:
@@ -138,3 +138,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
