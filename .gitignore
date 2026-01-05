@@ -11,3 +11,13 @@ DefiLlama_*.json
 
 
 .local_untracked_backup/
+# --- btc-futures-journal local scratch (do not commit) ---
+out/
+ledger/
+backfill_14d*.py
+daily_job.py
+ledger_rollup.py
+merge_ledger.py
+patch_md_utf8.py
+llama_paxg.ps1
+# --- end btc-futures-journal local scratch ---
