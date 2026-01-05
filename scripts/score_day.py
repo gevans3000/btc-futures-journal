@@ -1,8 +1,12 @@
 ﻿from __future__ import annotations
 
-import json, os, re
+import json
+import os
+import re
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+
 import requests
 
 ET = ZoneInfo("America/New_York")
@@ -15,7 +19,7 @@ def http_get_json(url: str, params: dict | None = None, timeout: int = 25):
     r.raise_for_status()
     return r.json()
 
-def fetch_15m_binance(date_et: str) -> list[dict]:
+def fetch_15m_binance_vision(date_et: str) -> list[dict]:
     y, m, d = [int(x) for x in date_et.split("-")]
     start_et = datetime(y, m, d, 6, 0, tzinfo=ET)
     end_et = start_et + timedelta(days=1)
@@ -41,6 +45,7 @@ def fetch_15m_binance(date_et: str) -> list[dict]:
     return rows
 
 def parse_trigger(s: str) -> tuple[str, float] | None:
+    # e.g. "15m close >= 87362.71" or "<="
     m = re.search(r"(>=|<=)\s*([0-9]+(?:\.[0-9]+)?)", s or "")
     if not m:
         return None
@@ -60,8 +65,8 @@ def journal_path(date_et: str) -> str:
     y = date_et.split("-")[0]
     return os.path.join("journal", y, f"{date_et}.json")
 
-def _dt_open_et(candle: dict) -> datetime:
-    return datetime.fromtimestamp(candle["t_open_ms"] / 1000, tz=timezone.utc).astimezone(ET)
+def _fmt(dt: datetime | None) -> str | None:
+    return None if dt is None else dt.strftime("%Y-%m-%d %H:%M")
 
 def score(date_et: str) -> dict:
     path = journal_path(date_et)
@@ -83,21 +88,13 @@ def score(date_et: str) -> dict:
         save_json(path, j)
         return {"status": "no_trigger_fields", "path": path}
 
-    # required prices
-    try:
-        long_entry = float(long["entry"]); long_stop = float(long["stop"])
-        short_entry = float(short["entry"]); short_stop = float(short["stop"])
-    except Exception:
-        j["daily_result"] = "bad_trade_fields"
-        j["daily_R"] = 0.0
-        j["paper_test_trade_review"] = {"status": "bad_trade_fields"}
-        save_json(path, j)
-        return {"status": "bad_trade_fields", "path": path}
-
+    # Required numeric fields
+    long_entry = float(long["entry"]); long_stop = float(long["stop"])
     long_tps = [float(x) for x in (long.get("tps") or [])]
+    short_entry = float(short["entry"]); short_stop = float(short["stop"])
     short_tps = [float(x) for x in (short.get("tps") or [])]
 
-    candles = fetch_15m_binance(date_et)
+    candles = fetch_15m_binance_vision(date_et)
     if not candles:
         j["daily_result"] = "no_candles"
         j["daily_R"] = 0.0
@@ -105,167 +102,222 @@ def score(date_et: str) -> dict:
         save_json(path, j)
         return {"status": "no_candles", "path": path}
 
-    # earliest trigger (by candle close rule)
-    triggered = "none"
-    trig_idx = None
+    # Find earliest trigger by 15m CLOSE
+    long_idx = None
+    short_idx = None
     for i, c in enumerate(candles):
-        long_hit = c["close"] >= lt[1]
-        short_hit = c["close"] <= st[1]
-        if long_hit or short_hit:
-            trig_idx = i
-            if long_hit and short_hit:
-                triggered = "conflict"
-            else:
-                triggered = "long" if long_hit else "short"
-            break
+        if long_idx is None and c["close"] >= lt[1]:
+            long_idx = i
+        if short_idx is None and c["close"] <= st[1]:
+            short_idx = i
 
-    scored_at = datetime.now(tz=ET).strftime("%Y-%m-%d %H:%M:%S")
+    triggered = None
+    trig_idx = None
+    if long_idx is None and short_idx is None:
+        triggered = "none"
+    elif long_idx is None:
+        triggered, trig_idx = "short", short_idx
+    elif short_idx is None:
+        triggered, trig_idx = "long", long_idx
+    else:
+        if long_idx < short_idx:
+            triggered, trig_idx = "long", long_idx
+        elif short_idx < long_idx:
+            triggered, trig_idx = "short", short_idx
+        else:
+            triggered, trig_idx = "conflict", long_idx
+
+    scored_at = datetime.now(tz=ET)
+    trig_time = None
+    if trig_idx is not None:
+        trig_open = datetime.fromtimestamp(candles[trig_idx]["t_open_ms"]/1000, tz=timezone.utc).astimezone(ET)
+        trig_time = trig_open + timedelta(minutes=15)  # trigger occurs on candle close
+
+    # Default: BE at +0.5R (can override with env BE_AT_R; set to 0 to disable)
+    try:
+        be_at_r = float((os.getenv("BE_AT_R") or "0.5").strip())
+    except Exception:
+        be_at_r = 0.5
+    if be_at_r < 0:
+        be_at_r = 0.0
+
     review = {
         "status": "scored",
         "date_et": date_et,
-        "scored_at_et": scored_at,
+        "scored_at_et": scored_at.strftime("%Y-%m-%d %H:%M:%S"),
         "triggered": triggered,
-        "trigger_time_et": None,
+        "trigger_time_et": _fmt(trig_time),
         "filled": False,
         "fill_time_et": None,
         "exit": "no_trigger",
         "exit_price": None,
         "exit_time_et": None,
+        "R": 0.0,
         "max_favorable_R": 0.0,
         "max_adverse_R": 0.0,
-        "R": 0.0,
+        "management": (f"be_after_{be_at_r}R" if be_at_r > 0 else "none"),
     }
 
     if triggered in ("none", "conflict"):
-        review["exit"] = "no_trigger" if triggered == "none" else "conflict"
-        j["paper_test_trade_review"] = review
         j["daily_result"] = "no_trigger" if triggered == "none" else "conflict"
         j["daily_R"] = 0.0
+        review["exit"] = j["daily_result"]
+        j["paper_test_trade_review"] = review
         save_json(path, j)
         return {"status": triggered, "path": path}
 
-    # trigger time = candle close time (open + 15m)
-    trig_open = _dt_open_et(candles[trig_idx])
-    review["trigger_time_et"] = (trig_open + timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M")
-
-    # require entry fill AFTER trigger (OCO conditional arms, then entry must trade)
+    # 1) Fill must occur AFTER trigger close candle
     fill_idx = None
-    for k in range(trig_idx + 1, len(candles)):
+    fill_time = None
+
+    scan_start = (trig_idx + 1) if trig_idx is not None else 0
+    for k in range(scan_start, len(candles)):
         c = candles[k]
+        t_open = datetime.fromtimestamp(c["t_open_ms"]/1000, tz=timezone.utc).astimezone(ET)
+
         if triggered == "long":
             if c["high"] >= long_entry:
                 fill_idx = k
+                fill_time = t_open
                 break
         else:
             if c["low"] <= short_entry:
                 fill_idx = k
+                fill_time = t_open
                 break
 
     if fill_idx is None:
         review["exit"] = "armed_not_filled"
-        j["paper_test_trade_review"] = review
         j["daily_result"] = f"{triggered}:armed_not_filled"
         j["daily_R"] = 0.0
+        j["paper_test_trade_review"] = review
         save_json(path, j)
         return {"status": "armed_not_filled", "path": path}
 
     review["filled"] = True
-    review["fill_time_et"] = _dt_open_et(candles[fill_idx]).strftime("%Y-%m-%d %H:%M")
+    review["fill_time_et"] = _fmt(fill_time)
 
-    # risk (avoid div by zero)
+    # 2) Simulate after fill candle opens (still simplified: intrabar ordering unknown)
     risk_long = abs(long_entry - long_stop)
     risk_short = abs(short_stop - short_entry)
-    if risk_long == 0 or risk_short == 0:
-        review["exit"] = "bad_risk_zero"
-        j["paper_test_trade_review"] = review
-        j["daily_result"] = "bad_risk_zero"
-        j["daily_R"] = 0.0
-        save_json(path, j)
-        return {"status": "bad_risk_zero", "path": path}
 
     max_fav_R = 0.0
     max_adv_R = 0.0
-    exit_reason = None
-    exit_price = None
-    exit_time_et = None
 
-    # simulate from fill candle forward
-    for c in candles[fill_idx:]:
-        t_open = _dt_open_et(c)
+    exit_reason = "open"
+    exit_price = None
+    exit_time = None
+
+    be_active = False
+    be_armed_idx = None
+    stop_level_long = long_stop
+    stop_level_short = short_stop
+
+    # Expiry: 17:00 ET that day
+    y, m, d = [int(x) for x in date_et.split("-")]
+    expiry = datetime(y, m, d, 17, 0, tzinfo=ET)
+
+    last_close = None
+    last_close_time = None
+
+    for k in range(fill_idx, len(candles)):
+        c = candles[k]
+        t_open = datetime.fromtimestamp(c["t_open_ms"]/1000, tz=timezone.utc).astimezone(ET)
+        if t_open >= expiry:
+            break
+
         hi, lo, cl = c["high"], c["low"], c["close"]
+        last_close = cl
+        last_close_time = t_open + timedelta(minutes=15)
 
         if triggered == "long":
-            max_fav_R = max(max_fav_R, (hi - long_entry) / risk_long)
-            max_adv_R = max(max_adv_R, (long_entry - lo) / risk_long)
+            risk = risk_long if risk_long > 0 else 1.0
+            max_fav_R = max(max_fav_R, (hi - long_entry) / risk)
+            max_adv_R = max(max_adv_R, (long_entry - lo) / risk)
 
-            stop_hit = lo <= long_stop
+            # Activate BE only on candles AFTER the fill candle (conservative)
+            if (not be_active) and be_at_r > 0 and k > fill_idx:
+                be_level = long_entry + be_at_r * risk
+                if hi >= be_level:
+                    be_active = True
+                    be_armed_idx = k
+                    stop_level_long = long_entry  # move stop to entry
+
+            stop_hit = lo <= stop_level_long and (not (be_active and be_armed_idx == k))
             tp_hit = None
             for tp in sorted(long_tps):
                 if hi >= tp:
                     tp_hit = tp
-                    break  # first TP only (conservative)
 
+            # Conservative on same-candle ambiguity: if stop and TP both touched, assume stop first.
             if stop_hit and tp_hit is not None:
                 exit_reason = "ambiguous_stop_and_tp_same_candle"
-                exit_price = long_stop
-                exit_time_et = t_open.strftime("%Y-%m-%d %H:%M")
+                exit_price = stop_level_long
+                exit_time = t_open
                 break
             if stop_hit:
-                exit_reason = "stopped"
-                exit_price = long_stop
-                exit_time_et = t_open.strftime("%Y-%m-%d %H:%M")
+                exit_reason = "stopped_be" if (be_active and stop_level_long == long_entry) else "stopped"
+                exit_price = stop_level_long
+                exit_time = t_open
                 break
             if tp_hit is not None:
                 exit_reason = f"tp_hit_{tp_hit}"
                 exit_price = tp_hit
-                exit_time_et = t_open.strftime("%Y-%m-%d %H:%M")
+                exit_time = t_open
                 break
 
         else:  # short
-            max_fav_R = max(max_fav_R, (short_entry - lo) / risk_short)
-            max_adv_R = max(max_adv_R, (hi - short_entry) / risk_short)
+            risk = risk_short if risk_short > 0 else 1.0
+            max_fav_R = max(max_fav_R, (short_entry - lo) / risk)
+            max_adv_R = max(max_adv_R, (hi - short_entry) / risk)
 
-            stop_hit = hi >= short_stop
+            if (not be_active) and be_at_r > 0 and k > fill_idx:
+                be_level = short_entry - be_at_r * risk
+                if lo <= be_level:
+                    be_active = True
+                    be_armed_idx = k
+                    stop_level_short = short_entry
+
+            stop_hit = hi >= stop_level_short and (not (be_active and be_armed_idx == k))
             tp_hit = None
             for tp in sorted(short_tps, reverse=True):
                 if lo <= tp:
                     tp_hit = tp
-                    break  # first TP only (conservative)
 
             if stop_hit and tp_hit is not None:
                 exit_reason = "ambiguous_stop_and_tp_same_candle"
-                exit_price = short_stop
-                exit_time_et = t_open.strftime("%Y-%m-%d %H:%M")
+                exit_price = stop_level_short
+                exit_time = t_open
                 break
             if stop_hit:
-                exit_reason = "stopped"
-                exit_price = short_stop
-                exit_time_et = t_open.strftime("%Y-%m-%d %H:%M")
+                exit_reason = "stopped_be" if (be_active and stop_level_short == short_entry) else "stopped"
+                exit_price = stop_level_short
+                exit_time = t_open
                 break
             if tp_hit is not None:
                 exit_reason = f"tp_hit_{tp_hit}"
                 exit_price = tp_hit
-                exit_time_et = t_open.strftime("%Y-%m-%d %H:%M")
+                exit_time = t_open
                 break
 
-    # expiry-close if nothing hit
-    if exit_price is None:
-        last = candles[-1]
-        last_open = _dt_open_et(last)
+    # Expiry settlement if still open
+    if exit_price is None and last_close is not None:
         exit_reason = "expired_close"
-        exit_price = float(last["close"])
-        exit_time_et = (last_open + timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M")
+        exit_price = float(last_close)
+        exit_time = last_close_time if last_close_time is not None else expiry
 
-    # realized R
-    if triggered == "long":
-        R = (exit_price - long_entry) / risk_long
-    else:
-        R = (short_entry - exit_price) / risk_short
+    # Compute R
+    R = 0.0
+    if exit_price is not None:
+        if triggered == "long":
+            R = (exit_price - long_entry) / (risk_long if risk_long > 0 else 1.0)
+        else:
+            R = (short_entry - exit_price) / (risk_short if risk_short > 0 else 1.0)
 
     review.update({
         "exit": exit_reason,
         "exit_price": exit_price,
-        "exit_time_et": exit_time_et,
+        "exit_time_et": _fmt(exit_time),
         "max_favorable_R": round(max_fav_R, 3),
         "max_adverse_R": round(max_adv_R, 3),
         "R": round(R, 3),
@@ -286,4 +338,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
