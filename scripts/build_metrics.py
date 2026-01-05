@@ -2,141 +2,238 @@
 
 import json
 import os
-from datetime import datetime
-from glob import glob
+import re
+from collections import Counter
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
-def _load_json(p: str) -> dict:
-    with open(p, "r", encoding="utf-8") as f:
-        return json.load(f)
+ET = ZoneInfo("America/New_York")
+DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.json$")
+
+
+@dataclass
+class Row:
+    date: str
+    side: str
+    filled: bool
+    exit: str
+    R: float
+    max_fav_R: float
+    max_adv_R: float
+    source: str
+    price_source: str
+    funding_source: str
+
+
+def _coalesce(x, default):
+    return x if x is not None else default
+
 
 def _safe_float(x, default=0.0) -> float:
     try:
+        if x is None:
+            return float(default)
         return float(x)
     except Exception:
-        return default
+        return float(default)
 
-def _list_day_files() -> list[str]:
-    files = glob(os.path.join("journal", "*", "*.json"))
-    files = [p for p in files if os.path.basename(p) not in {"LATEST.json", "METRICS.json"}]
-    out = []
-    for p in files:
-        name = os.path.basename(p)
-        if len(name) == 15 and name[4] == "-" and name[7] == "-" and name.endswith(".json"):
-            out.append(p)
-    out.sort()
-    return out
 
-def _review_or_pending(o: dict, date_fallback: str) -> dict:
-    r = o.get("paper_test_trade_review")
-    if isinstance(r, dict) and r:
-        # normalize Nones
-        r = dict(r)
-        r["date_et"] = r.get("date_et") or date_fallback
-        r["triggered"] = r.get("triggered") or "pending"
-        r["exit"] = r.get("exit") or "pending"
-        if "filled" not in r or r.get("filled") is None:
-            r["filled"] = False
-        if "R" not in r or r.get("R") is None:
-            r["R"] = 0.0
-        return r
+def load_rows(window_days: int) -> list[Row]:
+    # Window is "yesterday back N-1 days" in ET.
+    now_et = datetime.now(tz=ET)
+    end = (now_et.date() - timedelta(days=1))
+    start = end - timedelta(days=window_days - 1)
 
-    return {
-        "status": "pending",
-        "date_et": date_fallback,
-        "triggered": "pending",
-        "filled": False,
-        "exit": "pending",
-        "R": 0.0,
-    }
+    journal_dir = Path("journal")
+    rows: list[Row] = []
 
-def build(days: int = 30) -> tuple[dict, str]:
-    files = _list_day_files()
-    if not files:
-        stats = {"status": "no_files"}
-        return stats, "# Metrics\n\nNo journal day files found.\n"
+    for p in journal_dir.rglob("*.json"):
+        if not DAY_RE.match(p.name):
+            continue
 
-    tail = files[-days:]
-    rows = []
-    for p in tail:
-        o = _load_json(p)
-        date_fb = os.path.splitext(os.path.basename(p))[0]
-        r = _review_or_pending(o, date_fb)
-        rows.append({
-            "date": r.get("date_et", date_fb),
-            "triggered": r.get("triggered", "pending"),
-            "filled": bool(r.get("filled", False)),
-            "exit": ("no_trigger" if r.get("exit")=="armed_not_filled" else r.get("exit","pending")),
-            "R": _safe_float(r.get("R"), 0.0),
-        })
+        day = p.stem  # YYYY-MM-DD
+        try:
+            d = datetime.strptime(day, "%Y-%m-%d").date()
+        except Exception:
+            continue
+        if d < start or d > end:
+            continue
 
-    total_R = sum(x["R"] for x in rows)
-    avg_R_day = total_R / max(1, len(rows))
+        try:
+            obj = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
 
-    trade_rows = [x for x in rows if x["filled"] is True]
-    no_trade_rows = [x for x in rows if x["exit"] == "no_trigger"]
-    pending_rows = [x for x in rows if x["exit"] == "pending"]
+        r = obj.get("paper_test_trade_review") or {}
+        meta = obj.get("meta") or {}
 
-    wins = [x for x in trade_rows if x["R"] > 0]
-    losses = [x for x in trade_rows if x["R"] < 0]
+        side = str(_coalesce(r.get("triggered"), "missing"))
+        filled = bool(_coalesce(r.get("filled"), False))
+        exit_reason = str(_coalesce(r.get("exit"), "pending"))
 
-    def grp(key: str) -> dict[str, int]:
-        d: dict[str, int] = {}
-        for x in rows:
-            k = str(x.get(key, "pending"))
-            d[k] = d.get(k, 0) + 1
-        return dict(sorted(d.items(), key=lambda kv: (-kv[1], kv[0])))
+        # Simplify: if trigger happened but entry never filled, count as "no trade"
+        if exit_reason == "armed_not_filled":
+            exit_reason = "no_trigger"
+            filled = False
+            side = "none"
 
-    stats = {
+        row = Row(
+            date=day,
+            side=side,
+            filled=filled,
+            exit=exit_reason,
+            R=_safe_float(r.get("R"), 0.0),
+            max_fav_R=_safe_float(r.get("max_favorable_R"), 0.0),
+            max_adv_R=_safe_float(r.get("max_adverse_R"), 0.0),
+            source=str(_coalesce(meta.get("source"), "unknown")),
+            price_source=str(_coalesce(meta.get("price_source"), "unknown")),
+            funding_source=str(_coalesce(meta.get("funding_source"), "unknown")),
+        )
+        rows.append(row)
+
+    rows.sort(key=lambda x: x.date)
+    return rows
+
+
+def write_outputs(rows: list[Row], window_days: int) -> None:
+    out_md = Path("journal") / "METRICS.md"
+    out_js = Path("journal") / "METRICS.json"
+    out_md.parent.mkdir(parents=True, exist_ok=True)
+
+    # Pending/no-trade/trade definitions
+    pending = [x for x in rows if x.exit == "pending"]
+    no_trade = [x for x in rows if x.exit == "no_trigger"]
+    trades = [
+        x for x in rows
+        if x.filled and x.side in ("long", "short") and x.exit not in ("no_trigger", "pending")
+    ]
+
+    total_R = sum(x.R for x in trades)
+    avg_per_day = total_R / max(1, len(rows))
+    win_trades = [x for x in trades if x.R > 0]
+    loss_trades = [x for x in trades if x.R < 0]
+    win_rate = (len(win_trades) / max(1, len(trades))) * 100.0
+    expectancy = total_R / max(1, len(trades))
+
+    exit_counts = Counter(x.exit for x in rows if x.exit and x.exit != "None")
+    side_counts = Counter(x.side for x in rows if x.side and x.side != "None")
+
+    # Stop-loss diagnostics
+    stopped = [x for x in trades if x.exit == "stopped"]
+    def pct(n, d): return round(100.0 * n / max(1, d), 1)
+
+    salv_05 = sum(1 for x in stopped if x.max_fav_R >= 0.5)
+    salv_075 = sum(1 for x in stopped if x.max_fav_R >= 0.75)
+    salv_10 = sum(1 for x in stopped if x.max_fav_R >= 1.0)
+
+    overshoot_10 = sum(1 for x in stopped if x.max_adv_R > 1.0)
+    overshoot_15 = sum(1 for x in stopped if x.max_adv_R > 1.5)
+
+    # Data fidelity summary (what’s real vs generated)
+    src_counts = Counter(x.source for x in rows)
+    price_src_counts = Counter(x.price_source for x in rows)
+    fund_src_counts = Counter(x.funding_source for x in rows)
+
+    last_n = 12
+    last_rows = rows[-last_n:] if rows else []
+
+    # Markdown
+    lines: list[str] = []
+    lines.append("# Metrics (Auto)")
+    lines.append(f"- Window: last **{len(rows)}** days")
+    lines.append(f"- Total: **{round(total_R, 3)}R** | Avg/day: **{round(avg_per_day, 3)}R**")
+    lines.append(f"- Trade days: **{len(trades)}** | No-trade days: **{len(no_trade)}** | Pending: **{len(pending)}**")
+    lines.append(f"- Win rate (trades): **{round(win_rate, 1)}%** | Expectancy: **{round(expectancy, 3)}R/trade**")
+    lines.append("")
+
+    lines.append("## Data fidelity")
+    lines.append("- **Strategy/levels/paper plan:** generated by this repo’s code (not a human discretionary plan).")
+    lines.append("- **Scoring:** uses real historical **15m BTCUSDT candles** (Binance Vision).")
+    lines.append("- **Price for backfills:** uses historical **1m close at 06:00 ET** (Binance Vision).")
+    lines.append("- **Funding:** may be a *current* OKX snapshot in backfills unless historical funding is added.")
+    lines.append("- **Not modeled:** exchange fees, spread/slippage, and candle intrabar ordering ambiguity (we keep conservative rules, but it’s still simplified).")
+    lines.append("")
+    lines.append(f"- Sources seen in window: {dict(src_counts)}")
+    lines.append(f"- Price sources seen: {dict(price_src_counts)}")
+    lines.append(f"- Funding sources seen: {dict(fund_src_counts)}")
+    lines.append("")
+
+    lines.append("## Stop-loss diagnostics")
+    lines.append(f"- Stopped trades: **{len(stopped)}**")
+    lines.append("| Item | Count | % of stopped |")
+    lines.append("|---|---:|---:|")
+    lines.append(f"| Reached >= +0.5R before stop | {salv_05} | {pct(salv_05, len(stopped))}% |")
+    lines.append(f"| Reached >= +0.75R before stop | {salv_075} | {pct(salv_075, len(stopped))}% |")
+    lines.append(f"| Reached >= +1.0R before stop | {salv_10} | {pct(salv_10, len(stopped))}% |")
+    lines.append(f"| Candle overshoot: max_adverse_R > 1.0 | {overshoot_10} | {pct(overshoot_10, len(stopped))}% |")
+    lines.append(f"| Candle overshoot: max_adverse_R > 1.5 | {overshoot_15} | {pct(overshoot_15, len(stopped))}% |")
+    lines.append("")
+
+    lines.append("## Exit breakdown")
+    lines.append("| Item | Count |")
+    lines.append("|---|---:|")
+    for k, v in exit_counts.most_common():
+        lines.append(f"| {k} | {v} |")
+    lines.append("")
+
+    lines.append("## Triggered side breakdown")
+    lines.append("| Item | Count |")
+    lines.append("|---|---:|")
+    for k, v in side_counts.most_common():
+        lines.append(f"| {k} | {v} |")
+    lines.append("")
+
+    lines.append("## Last days")
+    lines.append("| Date | Side | Filled | Exit | R |")
+    lines.append("|---|---|---|---|---:|")
+    for x in last_rows:
+        lines.append(f"| {x.date} | {x.side} | {str(x.filled)} | {x.exit} | {round(x.R, 3)} |")
+    lines.append("")
+
+    out_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    # JSON output (for future dashboards)
+    payload = {
         "window_days": len(rows),
-        "total_R": round(total_R, 3),
-        "avg_R_per_day": round(avg_R_day, 3),
-        "trade_days": len(trade_rows),
-        "no_trade_days": len(no_trade_rows),
-        "pending_days": len(pending_rows),
-        "win_trades": len(wins),
-        "loss_trades": len(losses),
-        "win_rate_on_trades": round((len(wins) / max(1, len(trade_rows))) * 100, 1),
-        "expectancy_R_per_trade": round((sum(x["R"] for x in trade_rows) / max(1, len(trade_rows))), 3),
-        "exit_breakdown": grp("exit"),
-        "side_breakdown": grp("triggered"),
-        "asof_utc": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "total_R": round(total_R, 6),
+        "avg_R_per_day": round(avg_per_day, 6),
+        "trade_days": len(trades),
+        "no_trade_days": len(no_trade),
+        "pending_days": len(pending),
+        "win_rate_trades": round(win_rate, 3),
+        "expectancy_R_per_trade": round(expectancy, 6),
+        "exit_breakdown": dict(exit_counts),
+        "side_breakdown": dict(side_counts),
+        "stop_diagnostics": {
+            "stopped_count": len(stopped),
+            "stopped_reached_0_5R": salv_05,
+            "stopped_reached_0_75R": salv_075,
+            "stopped_reached_1_0R": salv_10,
+            "stopped_overshoot_gt_1_0R": overshoot_10,
+            "stopped_overshoot_gt_1_5R": overshoot_15,
+        },
+        "data_fidelity": {
+            "source_counts": dict(src_counts),
+            "price_source_counts": dict(price_src_counts),
+            "funding_source_counts": dict(fund_src_counts),
+        },
+        "last_days": [
+            {"date": x.date, "side": x.side, "filled": x.filled, "exit": x.exit, "R": round(x.R, 6)}
+            for x in last_rows
+        ],
+        "generated_at_et": datetime.now(tz=ET).strftime("%Y-%m-%d %H:%M:%S"),
     }
+    out_js.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    lines = []
-    lines.append("# Metrics (Auto)\n")
-    lines.append(f"- Window: last **{stats['window_days']}** days\n")
-    lines.append(f"- Total: **{stats['total_R']}R** | Avg/day: **{stats['avg_R_per_day']}R**\n")
-    lines.append(f"- Trade days: **{stats['trade_days']}** | No-trade days: **{stats['no_trade_days']}** | Pending: **{stats['pending_days']}**\n")
-    lines.append(f"- Win rate (trades): **{stats['win_rate_on_trades']}%** | Expectancy: **{stats['expectancy_R_per_trade']}R/trade**\n")
-
-    def md_table(title: str, d: dict[str, int]):
-        lines.append(f"\n## {title}\n")
-        lines.append("| Item | Count |\n|---|---:|\n")
-        for k, v in d.items():
-            lines.append(f"| {k} | {v} |\n")
-
-    md_table("Exit breakdown", stats["exit_breakdown"])
-    md_table("Triggered side breakdown", stats["side_breakdown"])
-
-    lines.append("\n## Last days\n")
-    lines.append("| Date | Side | Filled | Exit | R |\n|---|---|---|---|---:|\n")
-    for x in rows[-14:]:
-        lines.append(f"| {x['date']} | {x['triggered']} | {x['filled']} | {x['exit']} | {x['R']} |\n")
-
-    return stats, "".join(lines)
 
 def main():
-    days = int((os.getenv("METRICS_DAYS") or "90").strip())
-    stats, md = build(days=days)
-    os.makedirs("journal", exist_ok=True)
-    with open("journal/METRICS.json", "w", encoding="utf-8") as f:
-        json.dump(stats, f, indent=2, sort_keys=True)
-        f.write("\n")
-    with open("journal/METRICS.md", "w", encoding="utf-8") as f:
-        f.write(md)
-    print("Wrote journal/METRICS.md and journal/METRICS.json")
+    window_days = int(os.getenv("METRICS_DAYS", "90"))
+    rows = load_rows(window_days=window_days)
+    write_outputs(rows, window_days=window_days)
+    print(f"Wrote journal/METRICS.md and journal/METRICS.json for last {len(rows)} days.")
+
 
 if __name__ == "__main__":
     main()
-
-
