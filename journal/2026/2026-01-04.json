@@ -1,7 +1,7 @@
 {
   "btc_spot_usd": 91579.0,
   "daily_R": 0.0,
-  "daily_result": "long:open",
+  "daily_result": "no_trigger",
   "derivatives_okx": {
     "asof": "okx_current",
     "fundingRate": 3.81682499784e-05,
@@ -53,19 +53,21 @@
   },
   "paper_test_trade_review": {
     "R": 0.0,
+    "be_armed": false,
+    "be_armed_time_et": null,
+    "daily_result": "no_trigger",
     "date_et": "2026-01-04",
-    "exit": "open",
+    "exit": "no_trigger",
     "exit_price": null,
     "exit_time_et": null,
-    "fill_time_et": "2026-01-04 19:15",
-    "filled": true,
-    "management": "be_after_0.5R_next_candle",
+    "fill_time_et": null,
+    "filled": false,
     "max_adverse_R": 0.0,
     "max_favorable_R": 0.0,
-    "scored_at_et": "2026-01-05 11:45:40",
+    "scored_at_et": "2026-01-05 11:54:06",
     "status": "scored",
-    "trigger_time_et": "2026-01-04 19:15",
-    "triggered": "long"
+    "trigger_time_et": null,
+    "triggered": "none"
   },
   "price_time_et": "2026-01-04 06:00",
   "risk_rules": {
