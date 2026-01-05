@@ -1,5 +1,5 @@
 {
-  "avg_R_per_day": 0.406011,
+  "avg_R_per_day": 0.3949,
   "data_fidelity": {
     "funding_source_counts": {
       "okx_current": 90
@@ -14,6 +14,7 @@
   "exit_breakdown": {
     "expired_close": 1,
     "no_trigger": 26,
+    "open": 1,
     "stopped": 13,
     "tp_hit_100151.47": 1,
     "tp_hit_100931.04": 1,
@@ -59,15 +60,14 @@
     "tp_hit_90445.69": 1,
     "tp_hit_91236.91": 1,
     "tp_hit_91292.31": 1,
-    "tp_hit_92089.73": 1,
     "tp_hit_92477.58": 1,
     "tp_hit_92499.85": 1,
     "tp_hit_92564.77": 1,
     "tp_hit_94423.72": 1,
     "tp_hit_95208.1": 1
   },
-  "expectancy_R_per_trade": 0.570953,
-  "generated_at_et": "2026-01-05 11:29:11",
+  "expectancy_R_per_trade": 0.555328,
+  "generated_at_et": "2026-01-05 11:34:54",
   "last_days": [
     {
       "R": 0.0,
@@ -147,9 +147,9 @@
       "side": "long"
     },
     {
-      "R": 1.0,
+      "R": 0.0,
       "date": "2026-01-04",
-      "exit": "tp_hit_92089.73",
+      "exit": "open",
       "filled": true,
       "side": "long"
     }
@@ -169,8 +169,8 @@
     "stopped_reached_0_75R": 2,
     "stopped_reached_1_0R": 0
   },
-  "total_R": 36.541,
+  "total_R": 35.541,
   "trade_days": 64,
-  "win_rate_trades": 78.125,
+  "win_rate_trades": 76.562,
   "window_days": 90
 }
