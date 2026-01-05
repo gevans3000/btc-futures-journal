@@ -59,6 +59,9 @@ def main():
 
     # 3) rebuild markdown views
     run_py(["scripts/build_dashboard.py"])
-    run_py(["scripts/build_index.py"])\n    run_py(["scripts/build_metrics.py"])\nif __name__ == "__main__":
+    run_py(["scripts/build_index.py"])
+    run_py(["scripts/build_metrics.py"])
+if __name__ == "__main__":
     main()
+
 
