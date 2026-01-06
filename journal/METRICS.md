@@ -11,7 +11,7 @@
 - **Funding:** may be a *current* OKX snapshot in backfills unless historical funding is added.
 - **Not modeled:** exchange fees, spread/slippage, and candle intrabar ordering ambiguity (we keep conservative rules, but it’s still simplified).
 
-- Sources seen in window: {'backfill': 90}
+- Sources seen in window: {'backfill': 89, 'daily': 1}
 - Price sources seen: {'binance_vision_1m_close_at_0600_et': 90}
 - Funding sources seen: {'okx_current': 90}
 
@@ -30,7 +30,6 @@
 |---|---:|
 | no_trigger | 36 |
 | stopped | 11 |
-| tp_hit_122904.79 | 1 |
 | stopped_be | 1 |
 | tp_hit_118863.03 | 1 |
 | tp_hit_113334.44 | 1 |
@@ -73,18 +72,18 @@
 | tp_hit_88907.52 | 1 |
 | tp_hit_87527.77 | 1 |
 | tp_hit_90582.29 | 1 |
+| tp_hit_94618.88 | 1 |
 
 ## Triggered side breakdown
 | Item | Count |
 |---|---:|
 | none | 36 |
-| short | 34 |
-| long | 20 |
+| short | 33 |
+| long | 21 |
 
 ## Last days
 | Date | Side | Filled | Exit | R |
 |---|---|---|---|---:|
-| 2025-12-24 | none | False | no_trigger | 0.0 |
 | 2025-12-25 | long | True | tp_hit_88495.34 | 2.0 |
 | 2025-12-26 | short | True | stopped | -1.0 |
 | 2025-12-27 | none | False | no_trigger | 0.0 |
@@ -96,4 +95,5 @@
 | 2026-01-02 | long | True | tp_hit_90582.29 | 2.0 |
 | 2026-01-03 | none | False | no_trigger | 0.0 |
 | 2026-01-04 | none | False | no_trigger | 0.0 |
+| 2026-01-05 | long | True | tp_hit_94618.88 | 1.0 |
 
