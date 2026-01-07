@@ -1,11 +1,11 @@
 # Latest BTC Futures Playbook
 
-- **Run (ET):** 2026-01-06 06:09
-- **BTC Spot (USD):** 93688.45
-- **OKX fundingRate:** 7.90942672408e-05
-- **OKX premium:** -0.0004511807661305
+- **Run (ET):** 2026-01-07 06:01
+- **BTC Spot (USD):** 91955.37
+- **OKX fundingRate:** 0.0001
+- **OKX premium:** -0.0003600663566397
 
-Source JSON: [2026-01-06.json](2026/2026-01-06.json)
+Source JSON: [2026-01-07.json](2026/2026-01-07.json)
 
 History dashboard: [INDEX.md](INDEX.md)
 
