@@ -1,21 +1,21 @@
 {
-  "avg_R_per_day": 0.588889,
+  "avg_R_per_day": 0.573034,
   "data_fidelity": {
     "funding_source_counts": {
-      "okx_current": 90
+      "okx_current": 89
     },
     "price_source_counts": {
-      "binance_vision_1m_close_at_0600_et": 90
+      "binance_vision_1m_close_at_0600_et": 89
     },
     "source_counts": {
-      "backfill": 88,
-      "daily": 2
+      "backfill": 86,
+      "daily": 3
     }
   },
   "exit_breakdown": {
     "no_trigger": 35,
+    "pending": 1,
     "stopped": 11,
-    "stopped_be": 1,
     "tp_hit_100151.47": 1,
     "tp_hit_100544.78": 1,
     "tp_hit_101361.62": 1,
@@ -32,7 +32,6 @@
     "tp_hit_112527.38": 1,
     "tp_hit_113334.44": 1,
     "tp_hit_113466.08": 1,
-    "tp_hit_118863.03": 1,
     "tp_hit_84644.64": 1,
     "tp_hit_84944.17": 1,
     "tp_hit_86803.0": 1,
@@ -60,16 +59,9 @@
     "tp_hit_94586.12": 1,
     "tp_hit_94618.88": 1
   },
-  "expectancy_R_per_trade": 0.963636,
-  "generated_at_et": "2026-01-07 06:01:41",
+  "expectancy_R_per_trade": 0.962264,
+  "generated_at_et": "2026-01-09 06:09:54",
   "last_days": [
-    {
-      "R": -1.0,
-      "date": "2025-12-26",
-      "exit": "stopped",
-      "filled": true,
-      "side": "short"
-    },
     {
       "R": 0.0,
       "date": "2025-12-27",
@@ -146,14 +138,22 @@
       "exit": "tp_hit_91879.86",
       "filled": true,
       "side": "short"
+    },
+    {
+      "R": 0.0,
+      "date": "2026-01-07",
+      "exit": "pending",
+      "filled": false,
+      "side": "pending"
     }
   ],
   "no_trade_days": 35,
-  "pending_days": 0,
+  "pending_days": 1,
   "side_breakdown": {
     "long": 21,
     "none": 35,
-    "short": 34
+    "pending": 1,
+    "short": 32
   },
   "stop_diagnostics": {
     "stopped_count": 11,
@@ -163,8 +163,8 @@
     "stopped_reached_0_75R": 2,
     "stopped_reached_1_0R": 0
   },
-  "total_R": 53.0,
-  "trade_days": 55,
-  "win_rate_trades": 78.182,
-  "window_days": 90
+  "total_R": 51.0,
+  "trade_days": 53,
+  "win_rate_trades": 79.245,
+  "window_days": 89
 }
