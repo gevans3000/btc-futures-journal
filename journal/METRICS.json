@@ -1,21 +1,21 @@
 {
-  "avg_R_per_day": 0.534091,
+  "avg_R_per_day": 0.552941,
   "data_fidelity": {
     "funding_source_counts": {
-      "okx_current": 88
+      "okx_current": 85
     },
     "price_source_counts": {
-      "binance_vision_1m_close_at_0600_et": 88
+      "binance_vision_1m_close_at_0600_et": 85
     },
     "source_counts": {
-      "backfill": 82,
+      "backfill": 79,
       "daily": 6
     }
   },
   "exit_breakdown": {
-    "no_trigger": 34,
+    "no_trigger": 33,
     "pending": 2,
-    "stopped": 12,
+    "stopped": 11,
     "tp_hit_100151.47": 1,
     "tp_hit_100544.78": 1,
     "tp_hit_101361.62": 1,
@@ -23,7 +23,6 @@
     "tp_hit_102960.04": 1,
     "tp_hit_104230.57": 1,
     "tp_hit_106062.51": 1,
-    "tp_hit_108818.82": 1,
     "tp_hit_108969.65": 1,
     "tp_hit_110872.83": 1,
     "tp_hit_110991.31": 1,
@@ -57,8 +56,8 @@
     "tp_hit_94586.12": 1,
     "tp_hit_94618.88": 1
   },
-  "expectancy_R_per_trade": 0.903846,
-  "generated_at_et": "2026-01-13 06:10:03",
+  "expectancy_R_per_trade": 0.94,
+  "generated_at_et": "2026-01-16 06:01:34",
   "last_days": [
     {
       "R": 2.0,
@@ -145,24 +144,24 @@
       "side": "pending"
     }
   ],
-  "no_trade_days": 34,
+  "no_trade_days": 33,
   "pending_days": 2,
   "side_breakdown": {
     "long": 21,
-    "none": 34,
+    "none": 33,
     "pending": 2,
-    "short": 31
+    "short": 29
   },
   "stop_diagnostics": {
-    "stopped_count": 12,
-    "stopped_overshoot_gt_1_0R": 12,
-    "stopped_overshoot_gt_1_5R": 3,
+    "stopped_count": 11,
+    "stopped_overshoot_gt_1_0R": 11,
+    "stopped_overshoot_gt_1_5R": 2,
     "stopped_reached_0_5R": 6,
     "stopped_reached_0_75R": 2,
     "stopped_reached_1_0R": 0
   },
   "total_R": 47.0,
-  "trade_days": 52,
-  "win_rate_trades": 76.923,
-  "window_days": 88
+  "trade_days": 50,
+  "win_rate_trades": 78.0,
+  "window_days": 85
 }
