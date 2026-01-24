@@ -1,20 +1,20 @@
 {
-  "avg_R_per_day": 0.564706,
+  "avg_R_per_day": 0.5625,
   "data_fidelity": {
     "funding_source_counts": {
-      "okx_current": 85
+      "okx_current": 80
     },
     "price_source_counts": {
-      "binance_vision_1m_close_at_0600_et": 85
+      "binance_vision_1m_close_at_0600_et": 80
     },
     "source_counts": {
-      "backfill": 77,
-      "daily": 8
+      "backfill": 71,
+      "daily": 9
     }
   },
   "exit_breakdown": {
-    "no_trigger": 33,
-    "pending": 2,
+    "no_trigger": 29,
+    "pending": 3,
     "stopped": 11,
     "tp_hit_100151.47": 1,
     "tp_hit_100544.78": 1,
@@ -23,10 +23,8 @@
     "tp_hit_102960.04": 1,
     "tp_hit_104230.57": 1,
     "tp_hit_106062.51": 1,
-    "tp_hit_110872.83": 1,
     "tp_hit_110991.31": 1,
     "tp_hit_111708.55": 1,
-    "tp_hit_112527.38": 1,
     "tp_hit_113466.08": 1,
     "tp_hit_84644.64": 1,
     "tp_hit_84944.17": 1,
@@ -56,16 +54,9 @@
     "tp_hit_94618.88": 1,
     "tp_hit_94727.46": 1
   },
-  "expectancy_R_per_trade": 0.96,
-  "generated_at_et": "2026-01-18 06:07:29",
+  "expectancy_R_per_trade": 0.9375,
+  "generated_at_et": "2026-01-24 06:01:24",
   "last_days": [
-    {
-      "R": 0.0,
-      "date": "2026-01-01",
-      "exit": "no_trigger",
-      "filled": false,
-      "side": "none"
-    },
     {
       "R": 2.0,
       "date": "2026-01-02",
@@ -142,14 +133,21 @@
       "exit": "no_trigger",
       "filled": false,
       "side": "none"
+    },
+    {
+      "R": 0.0,
+      "date": "2026-01-18",
+      "exit": "pending",
+      "filled": false,
+      "side": "pending"
     }
   ],
-  "no_trade_days": 33,
-  "pending_days": 2,
+  "no_trade_days": 29,
+  "pending_days": 3,
   "side_breakdown": {
-    "long": 20,
-    "none": 33,
-    "pending": 2,
+    "long": 18,
+    "none": 29,
+    "pending": 3,
     "short": 30
   },
   "stop_diagnostics": {
@@ -160,8 +158,8 @@
     "stopped_reached_0_75R": 2,
     "stopped_reached_1_0R": 0
   },
-  "total_R": 48.0,
-  "trade_days": 50,
-  "win_rate_trades": 78.0,
-  "window_days": 85
+  "total_R": 45.0,
+  "trade_days": 48,
+  "win_rate_trades": 77.083,
+  "window_days": 80
 }
